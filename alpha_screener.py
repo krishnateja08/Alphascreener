@@ -7,7 +7,7 @@ Output: Interactive HTML dashboard
 
 import yfinance as yf
 import pandas as pd
-import pandas_ta as ta
+import ta
 import numpy as np
 import json
 import os
@@ -307,61 +307,65 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
 # ─────────────────────────────────────────────
 
 def calculate_indicators(df: pd.DataFrame) -> dict:
-    close = df["close"]
-    high  = df["high"]
-    low   = df["low"]
-    vol   = df["volume"]
-
+    close  = df["close"]
+    high   = df["high"]
+    low    = df["low"]
+    volume = df["volume"]
     result = {}
+
+    def safe_last(series):
+        try:
+            v = series.dropna()
+            return float(v.iloc[-1]) if len(v) > 0 else None
+        except:
+            return None
 
     # RSI
     try:
-        rsi_s = ta.rsi(close, length=14)
-        result["rsi"] = round(float(rsi_s.iloc[-1]), 2) if rsi_s is not None else None
+        rsi = ta.momentum.RSIIndicator(close=close, window=14).rsi()
+        v = safe_last(rsi)
+        result["rsi"] = round(v, 2) if v is not None else None
     except:
         result["rsi"] = None
 
     # MACD
     try:
-        macd_df = ta.macd(close, fast=12, slow=26, signal=9)
-        if macd_df is not None and not macd_df.empty:
-            result["macd"]        = round(float(macd_df["MACD_12_26_9"].iloc[-1]), 3)
-            result["macd_signal"] = round(float(macd_df["MACDs_12_26_9"].iloc[-1]), 3)
-            result["macd_hist"]   = round(float(macd_df["MACDh_12_26_9"].iloc[-1]), 3)
-            result["macd_bull"]   = result["macd"] > result["macd_signal"]
-        else:
-            result.update({"macd": None, "macd_signal": None, "macd_hist": None, "macd_bull": False})
+        macd_ind  = ta.trend.MACD(close=close, window_slow=26, window_fast=12, window_sign=9)
+        macd_val  = safe_last(macd_ind.macd())
+        macd_sig  = safe_last(macd_ind.macd_signal())
+        macd_hist = safe_last(macd_ind.macd_diff())
+        result["macd"]        = round(macd_val,  3) if macd_val  is not None else None
+        result["macd_signal"] = round(macd_sig,  3) if macd_sig  is not None else None
+        result["macd_hist"]   = round(macd_hist, 3) if macd_hist is not None else None
+        result["macd_bull"]   = (macd_val > macd_sig) if (macd_val and macd_sig) else False
     except:
         result.update({"macd": None, "macd_signal": None, "macd_hist": None, "macd_bull": False})
 
     # ATR
     try:
-        atr_s = ta.atr(high, low, close, length=14)
-        result["atr"] = round(float(atr_s.iloc[-1]), 2) if atr_s is not None else None
+        atr = ta.volatility.AverageTrueRange(high=high, low=low, close=close, window=14).average_true_range()
+        v = safe_last(atr)
+        result["atr"] = round(v, 2) if v is not None else None
     except:
         result["atr"] = None
 
-    # EMA 20, 50, 200
+    # EMA 20 / 50 / 200
     try:
-        ema20  = ta.ema(close, length=20)
-        ema50  = ta.ema(close, length=50)
-        ema200 = ta.ema(close, length=200)
+        ema20  = safe_last(ta.trend.EMAIndicator(close=close, window=20).ema_indicator())
+        ema50  = safe_last(ta.trend.EMAIndicator(close=close, window=50).ema_indicator())
+        ema200 = safe_last(ta.trend.EMAIndicator(close=close, window=200).ema_indicator())
         curr   = float(close.iloc[-1])
-        e20    = float(ema20.iloc[-1])  if ema20  is not None else None
-        e50    = float(ema50.iloc[-1])  if ema50  is not None else None
-        e200   = float(ema200.iloc[-1]) if ema200 is not None else None
-        result["ema20"]  = round(e20,  2) if e20  else None
-        result["ema50"]  = round(e50,  2) if e50  else None
-        result["ema200"] = round(e200, 2) if e200 else None
-
-        if e50 and e200:
-            if e50 > e200 and curr > e50:
+        result["ema20"]  = round(ema20,  2) if ema20  is not None else None
+        result["ema50"]  = round(ema50,  2) if ema50  is not None else None
+        result["ema200"] = round(ema200, 2) if ema200 is not None else None
+        if ema50 and ema200:
+            if ema50 > ema200 and curr > ema50:
                 result["ema_signal"] = "Golden Cross"
                 result["ema_bull"]   = True
-            elif e50 < e200:
+            elif ema50 < ema200:
                 result["ema_signal"] = "Death Cross"
                 result["ema_bull"]   = False
-            elif curr > e50:
+            elif curr > ema50:
                 result["ema_signal"] = "Above 50 EMA"
                 result["ema_bull"]   = True
             else:
@@ -373,10 +377,10 @@ def calculate_indicators(df: pd.DataFrame) -> dict:
     except:
         result.update({"ema20": None, "ema50": None, "ema200": None, "ema_signal": "N/A", "ema_bull": False})
 
-    # Volume ratio vs 20-period average
+    # Volume ratio
     try:
-        avg_vol = float(vol.rolling(20).mean().iloc[-1])
-        cur_vol = float(vol.iloc[-1])
+        avg_vol = float(volume.rolling(20).mean().iloc[-1])
+        cur_vol = float(volume.iloc[-1])
         ratio   = cur_vol / avg_vol if avg_vol > 0 else 1.0
         result["volume_ratio"] = round(ratio, 2)
         result["volume_bull"]  = ratio > 1.2
@@ -386,33 +390,25 @@ def calculate_indicators(df: pd.DataFrame) -> dict:
 
     # Stochastic
     try:
-        stoch_df = ta.stoch(high, low, close, k=14, d=3)
-        if stoch_df is not None and not stoch_df.empty:
-            k_col = [c for c in stoch_df.columns if c.startswith("STOCHk")][0]
-            result["stoch_k"] = round(float(stoch_df[k_col].iloc[-1]), 2)
-            result["stoch_bull"] = 20 < result["stoch_k"] < 80
-        else:
-            result["stoch_k"] = None
-            result["stoch_bull"] = False
+        stoch   = ta.momentum.StochasticOscillator(high=high, low=low, close=close, window=14, smooth_window=3)
+        stoch_k = safe_last(stoch.stoch())
+        result["stoch_k"]    = round(stoch_k, 2) if stoch_k is not None else None
+        result["stoch_bull"] = (20 < stoch_k < 80) if stoch_k is not None else False
     except:
-        result["stoch_k"] = None
+        result["stoch_k"]    = None
         result["stoch_bull"] = False
 
     # Bollinger Bands
     try:
-        bb = ta.bbands(close, length=20, std=2)
-        if bb is not None and not bb.empty:
-            cols = bb.columns.tolist()
-            lower_col = [c for c in cols if "BBL" in c][0]
-            upper_col = [c for c in cols if "BBU" in c][0]
-            mid_col   = [c for c in cols if "BBM" in c][0]
-            curr = float(close.iloc[-1])
-            bbl  = float(bb[lower_col].iloc[-1])
-            bbu  = float(bb[upper_col].iloc[-1])
-            bbm  = float(bb[mid_col].iloc[-1])
-            result["bb_lower"] = round(bbl, 2)
-            result["bb_upper"] = round(bbu, 2)
-            result["bb_mid"]   = round(bbm, 2)
+        bb   = ta.volatility.BollingerBands(close=close, window=20, window_dev=2)
+        bbl  = safe_last(bb.bollinger_lband())
+        bbu  = safe_last(bb.bollinger_hband())
+        bbm  = safe_last(bb.bollinger_mavg())
+        curr = float(close.iloc[-1])
+        result["bb_lower"] = round(bbl, 2) if bbl is not None else None
+        result["bb_upper"] = round(bbu, 2) if bbu is not None else None
+        result["bb_mid"]   = round(bbm, 2) if bbm is not None else None
+        if bbl and bbu:
             if curr <= bbl:
                 result["bb_signal"] = "At Lower Band"
                 result["bb_bull"]   = True
@@ -423,11 +419,13 @@ def calculate_indicators(df: pd.DataFrame) -> dict:
                 result["bb_signal"] = "Mid Band"
                 result["bb_bull"]   = True
         else:
-            result.update({"bb_lower": None, "bb_upper": None, "bb_mid": None, "bb_signal": "N/A", "bb_bull": False})
+            result["bb_signal"] = "N/A"
+            result["bb_bull"]   = False
     except:
         result.update({"bb_lower": None, "bb_upper": None, "bb_mid": None, "bb_signal": "N/A", "bb_bull": False})
 
     return result
+
 
 # ─────────────────────────────────────────────
 # SIGNAL SCORING
@@ -435,7 +433,7 @@ def calculate_indicators(df: pd.DataFrame) -> dict:
 
 def compute_signal(ind: dict, fund: dict) -> dict:
     """
-    Score 0–100. Each indicator contributes weight.
+    Score 0-100. Each indicator contributes weight.
     Technical: 75 pts | Fundamental: 25 pts
     """
     score = 0
