@@ -1021,11 +1021,9 @@ function loadStocks() {
   }
   mark('s2','done','✓'); document.getElementById('s2v').textContent=sec;
   const stocks = DATA[curCountry][sec] || [];
-  // Deduplicate by ticker so multi-timeframe runs don't show the same stock multiple times
-  const seen = new Set();
-  const unique = stocks.filter(s => { if (seen.has(s.ticker)) return false; seen.add(s.ticker); return true; });
+  // Each stock appears exactly once (timeframes nested inside .timeframes{})
   stkSel.innerHTML = '<option value="">— Select Company —</option>' +
-    unique.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
+    stocks.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
   stkSel.disabled = false;
   mark('s3','','3'); document.getElementById('s3v').textContent='Pending';
   document.getElementById('runBtn').disabled=true; curTicker=''; resetOut();
@@ -1230,8 +1228,9 @@ function showCard(silent = false) {
   if (!curTicker) return;
   const sec = document.getElementById('secSel').value;
   const stocks = DATA[curCountry][sec] || [];
-  const tf_stocks = stocks.filter(s => s.ticker === curTicker && s.timeframe === curTF);
-  const d = tf_stocks.length ? tf_stocks[0] : stocks.find(s => s.ticker === curTicker);
+  // Find the stock entry (unique per ticker), then get the right timeframe data
+  const stockEntry = stocks.find(s => s.ticker === curTicker);
+  const d = stockEntry ? (stockEntry.timeframes[curTF] || Object.values(stockEntry.timeframes)[0]) : null;
 
   if (!d) {
     if (!silent) document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data for ${curTicker} on ${curTF}</div><div class="ph-sub">Try a different timeframe or re-run the script</div></div>`;
@@ -1319,7 +1318,9 @@ def main():
                 continue
 
             print(f"\n[{country}] {sector}")
-            output_data[country][sector] = []
+            # Use dict keyed by ticker — prevents duplicates in JS dropdown when
+            # multiple timeframes are run (each stock appears only once in the list)
+            sector_dict = {}
 
             for ticker, name in stocks:
                 if args.ticker and ticker != args.ticker:
@@ -1328,17 +1329,26 @@ def main():
                 for tf in tfs:
                     result = analyse_stock(ticker, name, country, sector, tf)
                     if result:
-                        output_data[country][sector].append(result)
+                        if ticker not in sector_dict:
+                            sector_dict[ticker] = {
+                                "ticker":       ticker,
+                                "name":         name,
+                                "country":      country,
+                                "country_flag": result["country_flag"],
+                                "sector":       sector,
+                                "timeframes":   {}
+                            }
+                        sector_dict[ticker]["timeframes"][tf] = result
 
-            if not output_data[country][sector]:
-                del output_data[country][sector]
+            if sector_dict:
+                output_data[country][sector] = list(sector_dict.values())
 
     html = build_html(output_data, generated_at_ist)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
 
-    total = sum(len(v) for country in output_data.values() for v in country.values())
+    total = sum(len(v) * len(list(v[0]["timeframes"].keys())) for country in output_data.values() for v in country.values() if v)
     print(f"\n{'='*60}")
     print(f"  ✅ Done! Analysed {total} stock-timeframe combinations.")
     print(f"  📄 HTML saved to: {out_path.resolve()}")
