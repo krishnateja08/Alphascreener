@@ -153,7 +153,7 @@ TF_CONFIG = {
 # DATA FETCHING
 # ─────────────────────────────────────────────
 
-def fetch_ohlcv(ticker: str, tf: str) -> pd.DataFrame | None:
+def fetch_ohlcv(ticker: str, tf: str):
     cfg = TF_CONFIG[tf]
     try:
         df = yf.download(
@@ -540,7 +540,7 @@ def compute_signal(ind: dict, fund: dict) -> dict:
 # ANALYSE ONE STOCK
 # ─────────────────────────────────────────────
 
-def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str) -> dict | None:
+def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
     is_india = (country == "IN")
     currency = "₹" if is_india else "$"
     print(f"  Analysing {ticker} ({name}) [{tf}] ...", end=" ", flush=True)
