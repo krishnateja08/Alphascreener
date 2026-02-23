@@ -616,17 +616,19 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 :root{
   --bg:#04080f;
   --surface:#080e1a;
-  --surface2:#0c1422;
-  --border:#162030;
+  --surface2:#0d1525;
+  --border:#1a2e45;
   --ab:#00d4ff;
   --ag:#00ff88;
   --ar:#ff3d6b;
   --ay:#ffd600;
   --ap:#a855f7;
   --text:#c8d8ee;
-  --text-bright:#e8f2ff;
-  --muted:#3a5070;
-  --muted2:#2a3d55;
+  --text-bright:#eef6ff;
+  --label:#7ab4d4;
+  --sublabel:#5a8aaa;
+  --muted:#4a6e90;
+  --muted2:#3a5570;
   --dim:#0e1825;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -758,10 +760,10 @@ select option{background:#061020;color:#c8e8ff;}
 .fs.done .fn{background:var(--ag);border-color:var(--ag);color:#000;box-shadow:0 0 8px rgba(0,255,136,.4);}
 .fs.cur .fn{background:rgba(0,212,255,.2);border-color:var(--ab);color:var(--ab);box-shadow:0 0 8px rgba(0,212,255,.3);}
 .ftext{display:flex;flex-direction:column;gap:2px;min-width:0;}
-.fname{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4a6a88;}
-.fs.done .fname{color:rgba(0,255,136,.5);}
-.fs.cur .fname{color:rgba(0,212,255,.5);}
-.fval{font-size:12px;font-weight:700;color:#8ab8d4;font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fname{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#5a8aaa;}
+.fs.done .fname{color:rgba(0,255,136,.7);}
+.fs.cur .fname{color:rgba(0,212,255,.7);}
+.fval{font-size:12px;font-weight:700;color:#a8d0e8;font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fs.done .fval{color:var(--ag);text-shadow:0 0 8px rgba(0,255,136,.3);}
 .fs.cur .fval{color:var(--ab);text-shadow:0 0 8px rgba(0,212,255,.3);}
 
@@ -785,7 +787,7 @@ select option{background:#061020;color:#c8e8ff;}
 .mc{background:rgba(0,255,136,.07);color:#00bb60;border-color:rgba(0,255,136,.18);}
 .ms{background:rgba(168,85,247,.07);color:#b47eff;border-color:rgba(168,85,247,.18);}
 .mt{background:rgba(0,212,255,.07);color:var(--ab);border-color:rgba(0,212,255,.18);}
-.ticker-tag{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+.ticker-tag{font-family:'Space Mono',monospace;font-size:10px;color:#6090b0;}
 .ac-pb{text-align:right;}
 .ac-price{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--ab);}
 .chg-p{color:var(--ag);font-family:'Space Mono',monospace;font-size:13px;margin-top:3px;}
@@ -796,12 +798,12 @@ select option{background:#061020;color:#c8e8ff;}
 .sig-hold{background:rgba(255,214,0,.07);color:var(--ay);border:1px solid rgba(255,214,0,.2);}
 .sig-watch{background:rgba(0,212,255,.07);color:var(--ab);border:1px solid rgba(0,212,255,.2);}
 
-.ac-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;}
+.ac-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;background:rgba(4,10,20,.5);}
 .sec-lbl{
   font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
-  color:var(--muted);margin-bottom:13px;display:flex;align-items:center;gap:10px;
+  color:#7ab4d4;margin-bottom:13px;display:flex;align-items:center;gap:10px;
 }
-.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-lbl::after{content:'';flex:1;height:1px;background:rgba(120,180,220,.15);}
 
 /* ─── TOW ─── */
 .tow-lbls{display:flex;justify-content:space-between;margin-bottom:9px;}
@@ -812,7 +814,7 @@ select option{background:#061020;color:#c8e8ff;}
 .tow-bull{height:100%;background:linear-gradient(90deg,#00bb60,#00ff88);flex:1;}
 .tow-div{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:rgba(255,255,255,.1);border-radius:2px;}
 .tow-sr{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
-.tow-st{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.tow-st{font-family:'Space Mono',monospace;font-size:11px;color:#5a8aaa;}
 .tow-sn{font-size:17px;font-weight:800;}
 .tow-sn.buy{color:var(--ag);}
 .tow-sn.sell{color:var(--ar);}
@@ -822,16 +824,20 @@ select option{background:#061020;color:#c8e8ff;}
 /* ─── INDICATOR GRID ─── */
 .ig{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .ic{
-  background:var(--surface2);border:1px solid var(--border);
+  background:rgba(12,22,40,.95);
+  border:1px solid rgba(255,255,255,.1);
   border-radius:11px;padding:14px;
   display:flex;flex-direction:column;gap:7px;
   position:relative;overflow:hidden;
 }
+.ic.bull{border-color:rgba(0,255,136,.2);}
+.ic.bear{border-color:rgba(255,61,107,.2);}
+.ic.neut{border-color:rgba(255,214,0,.2);}
 .ic::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .ic.bull::before{background:var(--ag);}
 .ic.bear::before{background:var(--ar);}
 .ic.neut::before{background:var(--ay);}
-.in{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.in{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7ab4d4;}
 .iv{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;}
 .iv.bull{color:var(--ag);}
 .iv.bear{color:var(--ar);}
@@ -845,41 +851,42 @@ select option{background:#061020;color:#c8e8ff;}
 
 /* ─── ATR ─── */
 .atr-block{
-  background:rgba(255,214,0,.04);border:1px solid rgba(255,214,0,.12);
+  background:rgba(255,214,0,.06);
+  border:1px solid rgba(255,214,0,.22);
   border-radius:11px;padding:16px 20px;
   display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:18px;align-items:center;
 }
-.atr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ay);opacity:.6;}
+.atr-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ddaa00;}
 .atr-v{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--ay);}
 .atr-d{background:rgba(255,214,0,.12);align-self:stretch;}
 .atr-det{display:flex;flex-direction:column;gap:7px;}
-.atr-rl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.atr-rl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7ab4d4;}
 .atr-rv{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
 .stop{color:var(--ar);}
 .tgt{color:var(--ag);}
 
 /* ─── S&R ─── */
 .srg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.src{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:16px;}
+.src{background:rgba(10,18,35,.95);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:16px;}
 .srh{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
 .srh.r{color:var(--ar);}
 .srh.s{color:var(--ag);}
 .srl{display:flex;flex-direction:column;gap:7px;}
 .srv{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;}
-.srv.r{background:rgba(255,61,107,.05);border:1px solid rgba(255,61,107,.11);}
-.srv.s{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.11);}
-.srvl{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;}
+.srv.r{background:rgba(255,61,107,.09);border:1px solid rgba(255,61,107,.25);}
+.srv.s{background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.22);}
+.srvl{font-size:9px;color:#7ab4d4;font-family:'Space Mono',monospace;font-weight:600;}
 .srvp{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
 .srvp.r{color:var(--ar);}
 .srvp.s{color:var(--ag);}
-.sr-note{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted2);margin-top:9px;text-align:center;}
+.sr-note{font-family:'Space Mono',monospace;font-size:9px;color:#5a8aaa;margin-top:9px;text-align:center;}
 
 /* ─── FUNDAMENTALS ─── */
 .fundg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.fc{background:rgba(168,85,247,.04);border:1px solid rgba(168,85,247,.11);border-radius:11px;padding:14px;}
-.fl2{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7050a0;margin-bottom:7px;}
-.fv{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#b47eff;}
-.fsb{font-size:9px;color:var(--muted2);margin-top:3px;}
+.fc{background:rgba(100,50,180,.08);border:1px solid rgba(168,85,247,.22);border-radius:11px;padding:14px;}
+.fl2{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#a07ce0;margin-bottom:7px;}
+.fv{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#cc99ff;}
+.fsb{font-size:9px;color:#6890b0;margin-top:3px;}
 .eps-u{color:var(--ag);}
 .eps-d{color:var(--ar);}
 .eps-f{color:var(--ay);}
@@ -1149,16 +1156,16 @@ function buildCardHTML(d) {
       <div>
         <div class="atr-lbl">ATR (14)</div>
         <div class="atr-v">${d.atr}</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
+        <div style="font-size:9px;color:#7ab4d4;margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
       </div>
       <div class="atr-d"></div>
       <div class="atr-det">
         <div><div class="atr-rl">🔴 Stop Loss (1.5× ATR)</div><div class="atr-rv stop">${d.stop_loss}</div></div>
-        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:var(--muted);font-size:11px;">Entry − Stop Loss</div></div>
+        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:#7ab4d4;font-size:11px;font-weight:600;">Entry − Stop Loss</div></div>
       </div>
       <div class="atr-det">
         <div><div class="atr-rl">🟢 Target (2× ATR)</div><div class="atr-rv tgt">${d.target}</div></div>
-        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:var(--ay);font-size:11px;">1 : 2.0</div></div>
+        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:#ffd600;font-size:12px;font-weight:700;">1 : 2.0</div></div>
       </div>
     </div>
   </div>` : '';
@@ -1268,7 +1275,7 @@ function buildCardHTML(d) {
           <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb">Price-to-Earnings</div></div>
           <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb">${d.eps} trailing EPS</div></div>
           <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb">Total Capitalization</div></div>
-          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:12px;">${d.week52_low} – ${d.week52_high}</div><div class="fsb">Low / High</div></div>
+          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:13px;color:#cc99ff;">${d.week52_low} – ${d.week52_high}</div><div class="fsb">Low / High</div></div>
           <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb">Volatility vs Market</div></div>
           <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb">Annual Yield</div></div>
         </div>
