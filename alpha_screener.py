@@ -13,7 +13,7 @@ import json
 import os
 import sys
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # ─────────────────────────────────────────────
@@ -193,15 +193,11 @@ def fetch_fundamentals(ticker: str, is_india: bool) -> dict:
         beta = info.get("beta")
         sector = info.get("sector", "N/A")
 
-        # EPS trend heuristic: compare trailing vs forward EPS
         fwd_eps = info.get("forwardEps")
         if eps and fwd_eps:
-            if fwd_eps > eps:
-                eps_trend = "up"
-            elif fwd_eps < eps:
-                eps_trend = "down"
-            else:
-                eps_trend = "flat"
+            if fwd_eps > eps:   eps_trend = "up"
+            elif fwd_eps < eps: eps_trend = "down"
+            else:               eps_trend = "flat"
         else:
             eps_trend = "flat"
 
@@ -233,16 +229,11 @@ def fetch_fundamentals(ticker: str, is_india: bool) -> dict:
 # ─────────────────────────────────────────────
 
 def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
-    """
-    Calculate Support & Resistance using pivot points + local swing highs/lows.
-    More candles = more reliable levels (adapts per timeframe automatically).
-    """
     close = df["close"].values
     high  = df["high"].values
     low   = df["low"].values
     current_price = float(close[-1])
 
-    # --- Pivot-point based S&R (last 20 candles rolling window) ---
     window = min(20, len(df) - 1)
     recent_high = float(np.max(high[-window:]))
     recent_low  = float(np.min(low[-window:]))
@@ -259,7 +250,6 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
         round(recent_low - 2 * (recent_high - pivot), 2),
     ]
 
-    # --- Swing high/low detection ---
     swing_highs, swing_lows = [], []
     for i in range(2, len(high) - 2):
         if high[i] > high[i-1] and high[i] > high[i-2] and high[i] > high[i+1] and high[i] > high[i+2]:
@@ -267,7 +257,6 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
         if low[i] < low[i-1] and low[i] < low[i-2] and low[i] < low[i+1] and low[i] < low[i+2]:
             swing_lows.append(float(low[i]))
 
-    # Cluster nearby swing levels (within 0.5% of each other)
     def cluster(levels, tol=0.005):
         if not levels: return []
         levels = sorted(set(levels))
@@ -284,11 +273,9 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
     swing_h_clusters = cluster(swing_highs)
     swing_l_clusters = cluster(swing_lows)
 
-    # Resistance = above current price
     resistance = sorted([x for x in swing_h_clusters + r_pivot if x > current_price])[:n_levels]
     support    = sorted([x for x in swing_l_clusters + s_pivot if x < current_price], reverse=True)[:n_levels]
 
-    # Pad if not enough levels
     while len(resistance) < n_levels:
         last = resistance[-1] if resistance else current_price
         resistance.append(round(last * 1.02, 2))
@@ -432,14 +419,9 @@ def calculate_indicators(df: pd.DataFrame) -> dict:
 # ─────────────────────────────────────────────
 
 def compute_signal(ind: dict, fund: dict) -> dict:
-    """
-    Score 0-100. Each indicator contributes weight.
-    Technical: 75 pts | Fundamental: 25 pts
-    """
     score = 0
     details = []
 
-    # RSI (15 pts)
     rsi = ind.get("rsi")
     if rsi is not None:
         if 40 <= rsi <= 60:
@@ -447,19 +429,17 @@ def compute_signal(ind: dict, fund: dict) -> dict:
         elif 30 <= rsi < 40:
             score += 13; details.append(("RSI", "bull", rsi))
         elif rsi < 30:
-            score += 15; details.append(("RSI", "bull", rsi))   # oversold = opportunity
+            score += 15; details.append(("RSI", "bull", rsi))
         elif 60 < rsi <= 70:
             score += 7;  details.append(("RSI", "neut", rsi))
-        else:  # >70 overbought
+        else:
             score += 2;  details.append(("RSI", "bear", rsi))
 
-    # MACD (15 pts)
     if ind.get("macd_bull"):
         score += 15; details.append(("MACD", "bull", ind.get("macd")))
     elif ind.get("macd") is not None:
         score += 3;  details.append(("MACD", "bear", ind.get("macd")))
 
-    # EMA (15 pts)
     if ind.get("ema_bull"):
         ema_sig = ind.get("ema_signal","")
         pts = 15 if "Golden" in ema_sig else 10
@@ -467,13 +447,11 @@ def compute_signal(ind: dict, fund: dict) -> dict:
     elif ind.get("ema_signal") not in (None, "N/A"):
         score += 2;  details.append(("EMA", "bear", ind.get("ema_signal")))
 
-    # Volume (10 pts)
     if ind.get("volume_bull"):
         score += 10; details.append(("Volume", "bull", ind.get("volume_ratio")))
     else:
         score += 4;  details.append(("Volume", "neut", ind.get("volume_ratio")))
 
-    # Stochastic (10 pts)
     stoch = ind.get("stoch_k")
     if stoch is not None:
         if stoch < 20:
@@ -483,13 +461,11 @@ def compute_signal(ind: dict, fund: dict) -> dict:
         else:
             score += 7;  details.append(("Stochastic", "neut", stoch))
 
-    # Bollinger (10 pts)
     if ind.get("bb_bull"):
         score += 8; details.append(("Bollinger", "bull", ind.get("bb_signal")))
     else:
         score += 3; details.append(("Bollinger", "bear", ind.get("bb_signal")))
 
-    # ── Fundamentals (25 pts) ──
     pe_str = fund.get("pe", "N/A")
     try:
         pe_val = float(pe_str.replace("x",""))
@@ -497,10 +473,10 @@ def compute_signal(ind: dict, fund: dict) -> dict:
         elif pe_val < 35:  score += 7
         else:              score += 3
     except:
-        score += 5  # neutral if N/A
+        score += 5
 
     eps_trend = fund.get("eps_trend", "flat")
-    if eps_trend == "up":   score += 10
+    if eps_trend == "up":     score += 10
     elif eps_trend == "flat": score += 5
     else:                     score += 0
 
@@ -515,7 +491,6 @@ def compute_signal(ind: dict, fund: dict) -> dict:
 
     score = min(score, 100)
 
-    # Final signal
     if score >= 65:   signal = "BUY"
     elif score >= 50: signal = "WATCH"
     elif score >= 38: signal = "HOLD"
@@ -552,12 +527,10 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
     sr   = calculate_sr(df)
     fund = fetch_fundamentals(ticker, is_india)
 
-    # Price info
     curr_price = float(df["close"].iloc[-1])
     prev_price = float(df["close"].iloc[-2]) if len(df) > 1 else curr_price
     change_pct = ((curr_price - prev_price) / prev_price * 100) if prev_price else 0
 
-    # ATR-based stop/target (only displayed for BUY)
     atr_val = ind.get("atr")
     stop_loss = round(curr_price - 1.5 * atr_val, 2) if atr_val else None
     target    = round(curr_price + 2.0 * atr_val, 2)  if atr_val else None
@@ -583,7 +556,6 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
         "change_pos":  change_pct >= 0,
         "currency":    currency,
 
-        # Signal
         "signal":      sig["signal"],
         "score":       sig["score"],
         "bull_pct":    sig["bull_pct"],
@@ -591,7 +563,6 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
         "bull_count":  sig["bull_count"],
         "total_ind":   sig["total_ind"],
 
-        # Indicators
         "rsi":          ind.get("rsi"),
         "macd":         ind.get("macd"),
         "macd_signal":  ind.get("macd_signal"),
@@ -610,17 +581,14 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
         "bb_upper":     ind.get("bb_upper"),
         "bb_lower":     ind.get("bb_lower"),
 
-        # ATR
         "atr":        fmt_price(atr_val) if atr_val else "N/A",
         "stop_loss":  fmt_price(stop_loss),
         "target":     fmt_price(target),
 
-        # S&R
         "resistance": fmt_sr_list(sr["resistance"]),
         "support":    fmt_sr_list(sr["support"]),
         "pivot":      fmt_price(sr["pivot"]),
 
-        # Fundamentals
         "pe":             fund.get("pe", "N/A"),
         "eps":            fund.get("eps", "N/A"),
         "eps_trend":      fund.get("eps_trend", "flat"),
@@ -645,171 +613,274 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <title>MarketIntel Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c14;--surface:#0d1420;--surface2:#111928;--border:#1e2d45;--ab:#00d4ff;--ag:#00ff88;--ar:#ff3d6b;--ay:#ffd600;--ap:#a855f7;--text:#e2eaf5;--muted:#5a7196;--dim:#1a2840;}
+:root{
+  --bg:#04080f;
+  --surface:#080e1a;
+  --surface2:#0c1422;
+  --border:#162030;
+  --ab:#00d4ff;
+  --ag:#00ff88;
+  --ar:#ff3d6b;
+  --ay:#ffd600;
+  --ap:#a855f7;
+  --text:#c8d8ee;
+  --text-bright:#e8f2ff;
+  --muted:#3a5070;
+  --muted2:#2a3d55;
+  --dim:#0e1825;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--dim) 1px,transparent 1px),linear-gradient(90deg,var(--dim) 1px,transparent 1px);background-size:40px 40px;opacity:.4;pointer-events:none;z-index:0;}
-.wrap{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:24px;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--dim) 1px,transparent 1px),linear-gradient(90deg,var(--dim) 1px,transparent 1px);background-size:40px 40px;opacity:.35;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1340px;margin:0 auto;padding:20px 24px;}
 
-/* HEADER */
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 0 28px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+/* ─── HEADER ─── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 0 24px;border-bottom:1px solid var(--border);margin-bottom:28px;gap:16px;flex-wrap:wrap;}
 .logo{display:flex;align-items:center;gap:14px;}
-.logo-icon{width:46px;height:46px;background:linear-gradient(135deg,var(--ab),var(--ap));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
-.logo-title{font-size:24px;font-weight:800;letter-spacing:-.5px;}
+.logo-icon{width:46px;height:46px;background:linear-gradient(135deg,var(--ab),var(--ap));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.logo-title{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text-bright);}
 .logo-title span{color:var(--ab);}
 .logo-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;}
-.hdr-right{text-align:right;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.9;}
-.live{display:inline-block;width:7px;height:7px;background:var(--ag);border-radius:50%;margin-right:5px;animation:blink 1.4s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* FILTER PANEL */
-.fp{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:32px;}
-.fp-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+/* Generated block — highlighted in cyan */
+.hdr-right{text-align:right;}
+.gen-block{
+  display:inline-flex;flex-direction:column;gap:5px;
+  background:rgba(0,212,255,.06);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:10px;
+  padding:10px 16px;
+  min-width:210px;
+}
+.gen-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ab);opacity:.7;}
+.gen-time{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--ab);}
+.gen-live{font-family:'Space Mono',monospace;font-size:11px;color:#5fa8c0;margin-top:2px;display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+.live{display:inline-block;width:6px;height:6px;background:var(--ag);border-radius:50%;animation:blink 1.4s infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.12}}
+
+/* ─── FILTER PANEL ─── */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:28px;}
+.fp-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
 .fp-title::after{content:'';flex:1;height:1px;background:var(--border);}
-.frow{display:flex;gap:20px;align-items:flex-end;flex-wrap:wrap;}
-.fg{display:flex;flex-direction:column;gap:8px;}
-.fl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
-.btn-group{display:flex;gap:6px;}
-.btn{padding:9px 18px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;}
-.btn:hover{border-color:var(--ab);color:var(--ab);}
-.btn.active{background:rgba(0,212,255,.12);border-color:var(--ab);color:var(--ab);font-weight:700;}
-.btn.c-in{background:rgba(0,255,136,.1);border-color:var(--ag);color:var(--ag);font-weight:700;}
-.btn.c-us{background:rgba(0,212,255,.1);border-color:var(--ab);color:var(--ab);font-weight:700;}
+.frow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;}
+.fg{display:flex;flex-direction:column;gap:7px;min-width:0;}
+.fl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.btn-group{display:flex;gap:5px;flex-wrap:wrap;}
+.btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn:hover{border-color:var(--ab);color:var(--text);}
+.btn.active{background:rgba(0,212,255,.1);border-color:var(--ab);color:var(--ab);font-weight:700;}
+.btn.c-in{background:rgba(0,255,136,.07);border-color:rgba(0,255,136,.25);color:#00bb60;font-weight:700;}
+.btn.c-us{background:rgba(0,212,255,.07);border-color:rgba(0,212,255,.25);color:var(--ab);font-weight:700;}
 .sel-wrap{position:relative;}
-.sel-wrap::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none;}
-select{padding:10px 36px 10px 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;outline:none;appearance:none;min-width:200px;transition:border-color .2s;}
+.sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;pointer-events:none;}
+select{
+  padding:9px 32px 9px 13px;
+  border-radius:8px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);
+  font-family:'Space Mono',monospace;font-size:11px;
+  cursor:pointer;outline:none;appearance:none;
+  min-width:190px;transition:border-color .2s;width:100%;
+}
 select:focus{border-color:var(--ab);}
-select:disabled{opacity:.35;cursor:not-allowed;}
-.run-btn{padding:11px 32px;border-radius:10px;background:linear-gradient(135deg,var(--ab),var(--ap));border:none;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.5px;transition:transform .2s,box-shadow .2s;white-space:nowrap;}
-.run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,212,255,.3);}
-.run-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+select:disabled{opacity:.3;cursor:not-allowed;}
+select option{background:#0c1422;color:var(--text);}
+.run-btn{
+  padding:10px 28px;border-radius:10px;
+  background:linear-gradient(135deg,var(--ab),var(--ap));
+  border:none;color:#000;font-family:'Syne',sans-serif;
+  font-weight:800;font-size:13px;cursor:pointer;
+  letter-spacing:.5px;transition:transform .15s,box-shadow .15s;white-space:nowrap;
+}
+.run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,.28);}
+.run-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
 
-/* FLOW BAR */
-.flow{display:flex;margin-top:22px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.fs{flex:1;padding:10px 16px;display:flex;align-items:center;gap:8px;font-size:11px;border-right:1px solid var(--border);transition:all .3s;}
+/* ─── FLOW BAR ─── */
+.flow{display:flex;margin-top:20px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.fs{flex:1;padding:9px 14px;display:flex;align-items:center;gap:8px;font-size:11px;border-right:1px solid var(--border);transition:all .3s;min-width:0;}
 .fs:last-child{border-right:none;}
-.fs.done{background:rgba(0,255,136,.05);}
-.fs.cur{background:rgba(0,212,255,.07);}
-.fn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;}
+.fs.done{background:rgba(0,255,136,.04);}
+.fs.cur{background:rgba(0,212,255,.06);}
+.fn{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;flex-shrink:0;}
 .fs.done .fn{background:var(--ag);border-color:var(--ag);color:#000;}
-.fs.cur .fn{background:rgba(0,212,255,.2);border-color:var(--ab);color:var(--ab);}
-.ftext{display:flex;flex-direction:column;gap:1px;}
-.fname{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
-.fval{font-size:12px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;}
+.fs.cur .fn{background:rgba(0,212,255,.18);border-color:var(--ab);color:var(--ab);}
+.ftext{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.fname{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.fval{font-size:11px;font-weight:700;color:var(--text);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fs.done .fval{color:var(--ag);}
 .fs.cur .fval{color:var(--ab);}
 
-/* PLACEHOLDER */
-.ph{text-align:center;padding:80px 40px;background:var(--surface);border:1px dashed var(--border);border-radius:16px;color:var(--muted);animation:fu .4s ease;}
-.ph-icon{font-size:56px;margin-bottom:16px;opacity:.4;}
-.ph-text{font-size:18px;font-weight:700;color:var(--muted);margin-bottom:8px;}
-.ph-sub{font-family:'Space Mono',monospace;font-size:12px;}
+/* ─── PLACEHOLDER ─── */
+.ph{text-align:center;padding:70px 40px;background:var(--surface);border:1px dashed var(--border);border-radius:16px;animation:fu .4s ease;}
+.ph-icon{font-size:50px;margin-bottom:14px;opacity:.3;}
+.ph-text{font-size:17px;font-weight:700;color:var(--muted);margin-bottom:7px;}
+.ph-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);}
 @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* ANALYSIS CARD */
-.ac{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;animation:fu .5s ease;}
-.ac-hdr{padding:24px 28px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(0,212,255,.04),rgba(168,85,247,.04));display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;}
-.ac-name{font-size:26px;font-weight:800;letter-spacing:-.5px;}
-.ac-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-.mtag{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid;}
-.mc{background:rgba(0,255,136,.08);color:var(--ag);border-color:rgba(0,255,136,.2);}
-.ms{background:rgba(168,85,247,.08);color:var(--ap);border-color:rgba(168,85,247,.2);}
-.mt{background:rgba(0,212,255,.08);color:var(--ab);border-color:rgba(0,212,255,.2);}
+/* ─── ANALYSIS CARD ─── */
+.ac{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.ac-hdr{
+  padding:22px 26px;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,rgba(0,212,255,.03),rgba(168,85,247,.03));
+  display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;
+}
+.ac-name{font-size:24px;font-weight:800;letter-spacing:-.4px;color:var(--text-bright);}
+.ac-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px;}
+.mtag{padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid;}
+.mc{background:rgba(0,255,136,.07);color:#00bb60;border-color:rgba(0,255,136,.18);}
+.ms{background:rgba(168,85,247,.07);color:#b47eff;border-color:rgba(168,85,247,.18);}
+.mt{background:rgba(0,212,255,.07);color:var(--ab);border-color:rgba(0,212,255,.18);}
+.ticker-tag{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
 .ac-pb{text-align:right;}
-.ac-price{font-family:'Space Mono',monospace;font-size:36px;font-weight:700;color:var(--ab);}
-.chg-p{color:var(--ag);font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;}
-.chg-n{color:var(--ar);font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;}
-.sig{padding:8px 20px;border-radius:9px;font-weight:800;font-size:13px;letter-spacing:.5px;display:inline-block;}
-.sig-buy{background:rgba(0,255,136,.15);color:var(--ag);border:1px solid rgba(0,255,136,.35);}
-.sig-sell{background:rgba(255,61,107,.15);color:var(--ar);border:1px solid rgba(255,61,107,.35);}
-.sig-hold{background:rgba(255,214,0,.1);color:var(--ay);border:1px solid rgba(255,214,0,.25);}
-.sig-watch{background:rgba(0,212,255,.1);color:var(--ab);border:1px solid rgba(0,212,255,.25);}
+.ac-price{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--ab);}
+.chg-p{color:var(--ag);font-family:'Space Mono',monospace;font-size:13px;margin-top:3px;}
+.chg-n{color:var(--ar);font-family:'Space Mono',monospace;font-size:13px;margin-top:3px;}
+.sig{padding:7px 18px;border-radius:8px;font-weight:800;font-size:12px;letter-spacing:.5px;display:inline-block;margin-top:9px;}
+.sig-buy{background:rgba(0,255,136,.1);color:var(--ag);border:1px solid rgba(0,255,136,.28);}
+.sig-sell{background:rgba(255,61,107,.1);color:var(--ar);border:1px solid rgba(255,61,107,.28);}
+.sig-hold{background:rgba(255,214,0,.07);color:var(--ay);border:1px solid rgba(255,214,0,.2);}
+.sig-watch{background:rgba(0,212,255,.07);color:var(--ab);border:1px solid rgba(0,212,255,.2);}
 
-.ac-body{padding:24px 28px;display:flex;flex-direction:column;gap:28px;}
-.sec-lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.ac-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;}
+.sec-lbl{
+  font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:13px;display:flex;align-items:center;gap:10px;
+}
 .sec-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
 
-/* TOW */
-.tow-lbls{display:flex;justify-content:space-between;margin-bottom:10px;}
-.tow-bear-l{font-size:12px;font-weight:700;color:var(--ar);}
-.tow-bull-l{font-size:12px;font-weight:700;color:var(--ag);}
-.tow-bar{height:32px;border-radius:16px;overflow:hidden;display:flex;position:relative;background:var(--border);}
-.tow-bf{height:100%;background:linear-gradient(90deg,#ff1a4b,#ff7090);}
-.tow-bull{height:100%;background:linear-gradient(90deg,#00cc6a,#00ff88);flex:1;}
-.tow-div{position:absolute;left:50%;top:-4px;bottom:-4px;width:3px;background:rgba(255,255,255,.15);border-radius:2px;}
-.tow-sr{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
-.tow-st{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);}
-.tow-sn{font-size:18px;font-weight:800;}
+/* ─── TOW ─── */
+.tow-lbls{display:flex;justify-content:space-between;margin-bottom:9px;}
+.tow-bear-l{font-size:11px;font-weight:700;color:var(--ar);}
+.tow-bull-l{font-size:11px;font-weight:700;color:var(--ag);}
+.tow-bar{height:30px;border-radius:15px;overflow:hidden;display:flex;position:relative;background:var(--border);}
+.tow-bf{height:100%;background:linear-gradient(90deg,#cc1540,#ff4060);}
+.tow-bull{height:100%;background:linear-gradient(90deg,#00bb60,#00ff88);flex:1;}
+.tow-div{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:rgba(255,255,255,.1);border-radius:2px;}
+.tow-sr{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
+.tow-st{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.tow-sn{font-size:17px;font-weight:800;}
 .tow-sn.buy{color:var(--ag);}
 .tow-sn.sell{color:var(--ar);}
 .tow-sn.hold{color:var(--ay);}
 .tow-sn.watch{color:var(--ab);}
 
-/* IND GRID */
-.ig{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-.ic{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;}
+/* ─── INDICATOR GRID ─── */
+.ig{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+.ic{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:11px;padding:14px;
+  display:flex;flex-direction:column;gap:7px;
+  position:relative;overflow:hidden;
+}
 .ic::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .ic.bull::before{background:var(--ag);}
 .ic.bear::before{background:var(--ar);}
 .ic.neut::before{background:var(--ay);}
-.in{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
-.iv{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;}
+.in{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.iv{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;}
 .iv.bull{color:var(--ag);}
 .iv.bear{color:var(--ar);}
 .iv.neut{color:var(--ay);}
-.ist{font-size:10px;font-weight:700;}
+.ist{font-size:9px;font-weight:700;}
 .ist.bull{color:var(--ag);}
 .ist.bear{color:var(--ar);}
 .ist.neut{color:var(--ay);}
-.rsi-bar{height:4px;background:var(--border);border-radius:2px;margin-top:4px;}
+.rsi-bar{height:3px;background:var(--border);border-radius:2px;margin-top:3px;}
 .rsi-fill{height:100%;border-radius:2px;}
 
-/* ATR */
-.atr-block{background:rgba(255,214,0,.05);border:1px solid rgba(255,214,0,.15);border-radius:12px;padding:18px 22px;display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:20px;align-items:center;}
-.atr-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ay);opacity:.6;}
-.atr-v{font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--ay);}
-.atr-d{background:rgba(255,214,0,.15);align-self:stretch;}
-.atr-det{display:flex;flex-direction:column;gap:8px;}
-.atr-rl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
-.atr-rv{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;}
+/* ─── ATR ─── */
+.atr-block{
+  background:rgba(255,214,0,.04);border:1px solid rgba(255,214,0,.12);
+  border-radius:11px;padding:16px 20px;
+  display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:18px;align-items:center;
+}
+.atr-lbl{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ay);opacity:.6;}
+.atr-v{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--ay);}
+.atr-d{background:rgba(255,214,0,.12);align-self:stretch;}
+.atr-det{display:flex;flex-direction:column;gap:7px;}
+.atr-rl{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.atr-rv{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
 .stop{color:var(--ar);}
 .tgt{color:var(--ag);}
 
-/* SR */
-.srg{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.src{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;}
-.srh{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+/* ─── S&R ─── */
+.srg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.src{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:16px;}
+.srh{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
 .srh.r{color:var(--ar);}
 .srh.s{color:var(--ag);}
-.srl{display:flex;flex-direction:column;gap:8px;}
-.srv{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:8px;}
-.srv.r{background:rgba(255,61,107,.07);border:1px solid rgba(255,61,107,.14);}
-.srv.s{background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.14);}
-.srvl{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;}
-.srvp{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;}
+.srl{display:flex;flex-direction:column;gap:7px;}
+.srv{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;}
+.srv.r{background:rgba(255,61,107,.05);border:1px solid rgba(255,61,107,.11);}
+.srv.s{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.11);}
+.srvl{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;}
+.srvp{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
 .srvp.r{color:var(--ar);}
 .srvp.s{color:var(--ag);}
-.sr-note{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;text-align:center;}
+.sr-note{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted2);margin-top:9px;text-align:center;}
 
-/* FUND */
-.fundg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
-.fc{background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.13);border-radius:12px;padding:16px;}
-.fl2{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ap);opacity:.6;margin-bottom:8px;}
-.fv{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--ap);}
-.fsb{font-size:10px;color:var(--muted);margin-top:4px;}
+/* ─── FUNDAMENTALS ─── */
+.fundg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.fc{background:rgba(168,85,247,.04);border:1px solid rgba(168,85,247,.11);border-radius:11px;padding:14px;}
+.fl2{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7050a0;margin-bottom:7px;}
+.fv{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#b47eff;}
+.fsb{font-size:9px;color:var(--muted2);margin-top:3px;}
 .eps-u{color:var(--ag);}
 .eps-d{color:var(--ar);}
 .eps-f{color:var(--ay);}
 
-footer{text-align:center;padding:28px 0 12px;color:var(--muted);font-size:10px;font-family:'Space Mono',monospace;border-top:1px solid var(--border);margin-top:40px;line-height:2;}
-footer span{color:var(--ab);}
+/* ─── FOOTER ─── */
+footer{
+  text-align:center;padding:24px 0 10px;color:var(--muted2);
+  font-size:9px;font-family:'Space Mono',monospace;
+  border-top:1px solid var(--border);margin-top:36px;line-height:2.2;
+}
+footer span{color:var(--muted);}
 
-@media(max-width:900px){.ig{grid-template-columns:repeat(3,1fr);}.fundg{grid-template-columns:repeat(2,1fr);}.atr-block{grid-template-columns:1fr;}.srg{grid-template-columns:1fr;}.frow{flex-direction:column;}.flow{flex-direction:column;}}
+/* ─── RESPONSIVE ─── */
+@media(max-width:1100px){
+  .ig{grid-template-columns:repeat(3,1fr);}
+  .fundg{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:800px){
+  .wrap{padding:14px 16px;}
+  .hdr{flex-direction:column;align-items:flex-start;}
+  .hdr-right{width:100%;}
+  .gen-block{width:100%;box-sizing:border-box;min-width:unset;}
+  .gen-live{justify-content:flex-start;}
+  .frow{flex-direction:column;gap:14px;}
+  .fg{width:100%;}
+  .sel-wrap{width:100%;}
+  select{min-width:unset;width:100%;}
+  .btn-group{width:100%;}
+  .run-btn{width:100%;text-align:center;padding:12px 28px;}
+  .flow{flex-direction:column;}
+  .fs{border-right:none;border-bottom:1px solid var(--border);}
+  .fs:last-child{border-bottom:none;}
+  .ig{grid-template-columns:repeat(2,1fr);}
+  .fundg{grid-template-columns:repeat(2,1fr);}
+  .atr-block{grid-template-columns:1fr;gap:12px;}
+  .atr-d{display:none;}
+  .srg{grid-template-columns:1fr;}
+  .ac-hdr{flex-direction:column;}
+  .ac-pb{text-align:left;}
+  .ac-price{font-size:26px;}
+  .ac-name{font-size:20px;}
+}
+@media(max-width:480px){
+  .ig{grid-template-columns:1fr 1fr;}
+  .fundg{grid-template-columns:1fr 1fr;}
+  .logo-title{font-size:19px;}
+  .tow-bear-l,.tow-bull-l{font-size:10px;}
+  .ac-body{padding:16px;}
+  .ac-hdr{padding:16px;}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
 
+<!-- HEADER -->
 <div class="hdr">
   <div class="logo">
     <div class="logo-icon">📈</div>
@@ -819,9 +890,11 @@ footer span{color:var(--ab);}
     </div>
   </div>
   <div class="hdr-right">
-    <div><span class="live"></span>Data via Yahoo Finance (yfinance)</div>
-    <div>Generated: __GENERATED__</div>
-    <div>Powered by GitHub Actions ⚡</div>
+    <div class="gen-block">
+      <div class="gen-label">Generated (IST)</div>
+      <div class="gen-time">__GENERATED_IST__</div>
+      <div class="gen-live"><span class="live"></span><span id="liveClk">--:--:-- IST</span></div>
+    </div>
   </div>
 </div>
 
@@ -892,7 +965,7 @@ footer span{color:var(--ab);}
 </div>
 
 <footer>
-  <span>MarketIntel</span> · Python + yfinance + pandas-ta · GitHub Actions Scheduled<br>
+  <span>MarketIntel</span> · Python + yfinance + pandas-ta · Automated Daily Analysis<br>
   <span>Data is for informational purposes only — Not financial advice.</span>
 </footer>
 </div>
@@ -902,16 +975,30 @@ const DATA = __DATA_JSON__;
 
 let curCountry = 'IN', curTF = '1D', curTicker = '';
 
+/* ── Live IST Clock — updates every second, no layout shift ── */
+function updateClock() {
+  const now = new Date();
+  const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const hh = String(ist.getHours()).padStart(2,'0');
+  const mm = String(ist.getMinutes()).padStart(2,'0');
+  const ss = String(ist.getSeconds()).padStart(2,'0');
+  const el = document.getElementById('liveClk');
+  if (el) el.textContent = `${hh}:${mm}:${ss} IST`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── Silent background refresh — every 60s, no flicker or layout changes ── */
+let _refreshCard = null;
+setInterval(() => { if (_refreshCard) _refreshCard(); }, 60000);
+
+/* ── Country Select ── */
 function selCountry(code, btn) {
   curCountry = code;
-  ['IN','US'].forEach(c => {
-    const b = document.getElementById('btn-'+c);
-    b.className = 'btn';
-  });
+  ['IN','US'].forEach(c => document.getElementById('btn-'+c).className = 'btn');
   btn.className = code==='IN' ? 'btn c-in' : 'btn c-us';
   document.getElementById('s1v').textContent = code==='IN' ? '🇮🇳 India' : '🇺🇸 USA';
   mark('s1','done','✓');
-  // Build sector list
   const sectors = Object.keys(DATA[code] || {});
   const secSel = document.getElementById('secSel');
   secSel.innerHTML = '<option value="">— Select Sector —</option>' +
@@ -924,7 +1011,14 @@ function selCountry(code, btn) {
 function loadStocks() {
   const sec = document.getElementById('secSel').value;
   const stkSel = document.getElementById('stkSel');
-  if (!sec) { stkSel.innerHTML='<option>— Select Sector First —</option>'; stkSel.disabled=true; document.getElementById('runBtn').disabled=true; resetOut(); mark('s2','','2'); document.getElementById('s2v').textContent='Pending'; return; }
+  if (!sec) {
+    stkSel.innerHTML='<option>— Select Sector First —</option>';
+    stkSel.disabled=true;
+    document.getElementById('runBtn').disabled=true;
+    resetOut();
+    mark('s2','','2'); document.getElementById('s2v').textContent='Pending';
+    return;
+  }
   mark('s2','done','✓'); document.getElementById('s2v').textContent=sec;
   const stocks = DATA[curCountry][sec] || [];
   stkSel.innerHTML = '<option value="">— Select Company —</option>' +
@@ -952,7 +1046,7 @@ function setTF(tf, btn) {
   btn.className='btn active';
   document.getElementById('s4v').textContent=tf;
   mark('s4','done','✓');
-  if (document.getElementById('out').querySelector('.ac')) showCard();
+  if (document.getElementById('out').querySelector('.ac')) showCard(true);
 }
 
 function mark(id, cls, num) {
@@ -961,34 +1055,36 @@ function mark(id, cls, num) {
   el.querySelector('.fn').textContent = num;
 }
 
-function resetStock() { const s=document.getElementById('stkSel'); s.innerHTML='<option>— Select Sector First —</option>'; s.disabled=true; document.getElementById('runBtn').disabled=true; curTicker=''; }
+function resetStock() {
+  const s=document.getElementById('stkSel');
+  s.innerHTML='<option>— Select Sector First —</option>';
+  s.disabled=true;
+  document.getElementById('runBtn').disabled=true;
+  curTicker='';
+  _refreshCard=null;
+}
 
 function resetOut() {
   document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">🔍</div><div class="ph-text">Select Country → Sector → Stock → Timeframe</div><div class="ph-sub">Then click ⚡ Analyze to see full technical + fundamental analysis</div></div>`;
   mark('s5','cur','5'); document.getElementById('s5v').textContent='Waiting...';
+  _refreshCard=null;
 }
 
-function showCard() {
-  if (!curTicker) return;
-  const sec = document.getElementById('secSel').value;
-  const stocks = DATA[curCountry][sec] || [];
-  const tf_stocks = stocks.filter(s => s.ticker === curTicker && s.timeframe === curTF);
-  const d = tf_stocks.length ? tf_stocks[0] : stocks.find(s=>s.ticker===curTicker);
-  if (!d) { document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data found for ${curTicker} on ${curTF}</div><div class="ph-sub">Try a different timeframe or re-run the analysis script</div></div>`; return; }
-
-  const sigCls = {BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'}[d.signal]||'sig-watch';
+/* ── Build card HTML (pure function — no DOM side effects) ── */
+function buildCardHTML(d) {
+  const sigCls   = {BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'}[d.signal]||'sig-watch';
   const sigEmoji = {BUY:'✅',SELL:'❌',HOLD:'⏸',WATCH:'👁'}[d.signal]||'⚠️';
   const scoreCls = d.score>=65?'buy':d.score<=40?'sell':d.score>=50?'watch':'hold';
 
-  function rsiCls(r) { return r>70?'bear':r<35?'bull':'neut'; }
-  function rsiStat(r) { return r>70?'● Overbought':r<35?'● Oversold — Opportunity':'● Neutral Zone'; }
-  function rsiColor(r) { return r>70?'var(--ar)':r<35?'var(--ag)':'var(--ay)'; }
-  const rsiPct = Math.min(d.rsi||0,100);
+  const rsiCls  = r => r>70?'bear':r<35?'bull':'neut';
+  const rsiStat = r => r>70?'● Overbought':r<35?'● Oversold — Opportunity':'● Neutral Zone';
+  const rsiColor= r => r>70?'var(--ar)':r<35?'var(--ag)':'var(--ay)';
+  const rsiPct  = Math.min(d.rsi||0,100);
 
-  const volStr = d.volume_ratio!=null ? `${d.volume_ratio}x Avg` : 'N/A';
+  const volStr   = d.volume_ratio!=null ? `${d.volume_ratio}x Avg` : 'N/A';
   const stochStr = d.stoch_k!=null ? `${d.stoch_k}` : 'N/A';
   const stochCls = d.stoch_bull ? 'bull' : 'bear';
-  const stochStat = d.stoch_k>80?'● Overbought':d.stoch_k<20?'● Oversold':'● In Range';
+  const stochStat= d.stoch_k>80?'● Overbought':d.stoch_k<20?'● Oversold':'● In Range';
 
   const atrSection = d.signal==='BUY' ? `
   <div>
@@ -997,16 +1093,16 @@ function showCard() {
       <div>
         <div class="atr-lbl">ATR (14)</div>
         <div class="atr-v">${d.atr}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
       </div>
       <div class="atr-d"></div>
       <div class="atr-det">
         <div><div class="atr-rl">🔴 Stop Loss (1.5× ATR)</div><div class="atr-rv stop">${d.stop_loss}</div></div>
-        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:var(--muted);font-size:12px;">Entry − Stop Loss</div></div>
+        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:var(--muted);font-size:11px;">Entry − Stop Loss</div></div>
       </div>
       <div class="atr-det">
         <div><div class="atr-rl">🟢 Target (2× ATR)</div><div class="atr-rv tgt">${d.target}</div></div>
-        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:var(--ay);font-size:12px;">1 : 2.0</div></div>
+        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:var(--ay);font-size:11px;">1 : 2.0</div></div>
       </div>
     </div>
   </div>` : '';
@@ -1014,7 +1110,7 @@ function showCard() {
   const epsCls = d.eps_trend==='up'?'eps-u':d.eps_trend==='down'?'eps-d':'eps-f';
   const epsTxt = d.eps_trend==='up'?'▲ Rising':d.eps_trend==='down'?'▼ Falling':'— Flat';
 
-  document.getElementById('out').innerHTML = `
+  return `
   <div class="ac">
     <div class="ac-hdr">
       <div>
@@ -1023,19 +1119,18 @@ function showCard() {
           <span class="mtag mc">${d.country_flag} ${d.country==='IN'?'India':'USA'}</span>
           <span class="mtag ms">📂 ${d.sector}</span>
           <span class="mtag mt">⏱ ${curTF} Timeframe</span>
-          <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);">${d.ticker}</span>
+          <span class="ticker-tag">${d.ticker}</span>
         </div>
       </div>
       <div class="ac-pb">
         <div class="ac-price">${d.price}</div>
         <div class="${d.change_pos?'chg-p':'chg-n'}">${d.change_pos?'▲':'▼'} ${d.change}</div>
-        <div style="margin-top:10px;"><span class="sig ${sigCls}">${sigEmoji} ${d.signal}</span></div>
+        <div><span class="sig ${sigCls}">${sigEmoji} ${d.signal}</span></div>
       </div>
     </div>
 
     <div class="ac-body">
 
-      <!-- TOW -->
       <div>
         <div class="sec-lbl">⚔️ Tug of War — Bull vs Bear Pressure</div>
         <div class="tow-lbls">
@@ -1054,7 +1149,6 @@ function showCard() {
         </div>
       </div>
 
-      <!-- INDICATORS -->
       <div>
         <div class="sec-lbl">📊 Technical Indicators — ${curTF}</div>
         <div class="ig">
@@ -1066,12 +1160,12 @@ function showCard() {
           </div>
           <div class="ic ${d.macd_bull?'bull':'bear'}">
             <div class="in">MACD</div>
-            <div class="iv ${d.macd_bull?'bull':'bear'}" style="font-size:14px;">${d.macd??'N/A'}</div>
+            <div class="iv ${d.macd_bull?'bull':'bear'}" style="font-size:13px;">${d.macd??'N/A'}</div>
             <div class="ist ${d.macd_bull?'bull':'bear'}">${d.macd_bull?'● Bullish Cross':'● Bearish Cross'}</div>
           </div>
           <div class="ic ${d.ema_bull?'bull':'bear'}">
             <div class="in">EMA 50/200</div>
-            <div class="iv ${d.ema_bull?'bull':'bear'}" style="font-size:13px;">${d.ema_signal}</div>
+            <div class="iv ${d.ema_bull?'bull':'bear'}" style="font-size:12px;">${d.ema_signal}</div>
             <div class="ist ${d.ema_bull?'bull':'bear'}">${d.ema_bull?'● Uptrend':'● Downtrend'}</div>
           </div>
           <div class="ic ${d.volume_bull?'bull':'neut'}">
@@ -1087,10 +1181,8 @@ function showCard() {
         </div>
       </div>
 
-      <!-- ATR (BUY only) -->
       ${atrSection}
 
-      <!-- S&R -->
       <div>
         <div class="sec-lbl">📍 Support &amp; Resistance — ${curTF} Timeframe | Pivot: ${d.pivot}</div>
         <div class="srg">
@@ -1114,14 +1206,13 @@ function showCard() {
         <div class="sr-note">⚠️ S&amp;R levels dynamically calculated per selected timeframe (${curTF})</div>
       </div>
 
-      <!-- FUNDAMENTALS -->
       <div>
         <div class="sec-lbl">📈 Fundamental Overlay</div>
         <div class="fundg">
           <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb">Price-to-Earnings</div></div>
           <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb">${d.eps} trailing EPS</div></div>
           <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb">Total Capitalization</div></div>
-          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:13px;">${d.week52_low} – ${d.week52_high}</div><div class="fsb">Low / High</div></div>
+          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:12px;">${d.week52_low} – ${d.week52_high}</div><div class="fsb">Low / High</div></div>
           <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb">Volatility vs Market</div></div>
           <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb">Annual Yield</div></div>
         </div>
@@ -1129,16 +1220,49 @@ function showCard() {
 
     </div>
   </div>`;
-
-  mark('s5','done','✓'); document.getElementById('s5v').textContent='✅ Done';
 }
 
-// ── Bootstrap sector dropdown for default country (IN) ──
+/* ── Show card / silent patch ── */
+function showCard(silent = false) {
+  if (!curTicker) return;
+  const sec = document.getElementById('secSel').value;
+  const stocks = DATA[curCountry][sec] || [];
+  const tf_stocks = stocks.filter(s => s.ticker === curTicker && s.timeframe === curTF);
+  const d = tf_stocks.length ? tf_stocks[0] : stocks.find(s => s.ticker === curTicker);
+
+  if (!d) {
+    if (!silent) document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data for ${curTicker} on ${curTF}</div><div class="ph-sub">Try a different timeframe or re-run the script</div></div>`;
+    return;
+  }
+
+  if (silent) {
+    /* Patch only the dynamic values — zero flicker, zero layout shift */
+    const outEl = document.getElementById('out');
+    const existing = outEl.querySelector('.ac');
+    if (!existing) { outEl.innerHTML = buildCardHTML(d); return; }
+
+    const priceEl = existing.querySelector('.ac-price');
+    const chgEl   = existing.querySelector('.chg-p,.chg-n');
+    const towBf   = existing.querySelector('.tow-bf');
+    const towSn   = existing.querySelector('.tow-sn');
+
+    if (priceEl) priceEl.textContent = d.price;
+    if (chgEl) { chgEl.className = d.change_pos?'chg-p':'chg-n'; chgEl.textContent=(d.change_pos?'▲ ':'▼ ')+d.change; }
+    if (towBf) towBf.style.width = d.bear_pct+'%';
+    if (towSn) towSn.textContent = d.score+' / 100';
+  } else {
+    document.getElementById('out').innerHTML = buildCardHTML(d);
+    mark('s5','done','✓'); document.getElementById('s5v').textContent='✅ Done';
+  }
+
+  _refreshCard = () => showCard(true);
+}
+
+/* ── Bootstrap India sectors on load ── */
 (function init() {
-  const sectors = Object.keys(DATA['IN'] || {});
   const secSel = document.getElementById('secSel');
   secSel.innerHTML = '<option value="">— Select Sector —</option>' +
-    sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
+    Object.keys(DATA['IN']||{}).map(s=>`<option value="${s}">${s}</option>`).join('');
 })();
 </script>
 </body>
@@ -1146,8 +1270,8 @@ function showCard() {
 """
 
 
-def build_html(data: dict, generated_at: str) -> str:
-    html = HTML_TEMPLATE.replace("__GENERATED__", generated_at)
+def build_html(data: dict, generated_at_ist: str) -> str:
+    html = HTML_TEMPLATE.replace("__GENERATED_IST__", generated_at_ist)
     html = html.replace("__DATA_JSON__", json.dumps(data, ensure_ascii=False))
     return html
 
@@ -1158,11 +1282,11 @@ def build_html(data: dict, generated_at: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="MarketIntel Stock Analyser")
-    parser.add_argument("--country",   choices=["IN","US","ALL"], default="ALL",  help="Country to scan")
-    parser.add_argument("--sector",    default=None,  help="Specific sector (optional)")
-    parser.add_argument("--ticker",    default=None,  help="Single ticker (optional)")
-    parser.add_argument("--timeframes",default="1D",  help="Comma-separated timeframes: 15m,1H,1D,1W")
-    parser.add_argument("--output",    default="docs/index.html", help="Output HTML path")
+    parser.add_argument("--country",   choices=["IN","US","ALL"], default="ALL")
+    parser.add_argument("--sector",    default=None)
+    parser.add_argument("--ticker",    default=None)
+    parser.add_argument("--timeframes",default="1D")
+    parser.add_argument("--output",    default="docs/index.html")
     args = parser.parse_args()
 
     tfs = [t.strip() for t in args.timeframes.split(",") if t.strip() in TF_CONFIG]
@@ -1171,13 +1295,16 @@ def main():
 
     countries = ["IN","US"] if args.country == "ALL" else [args.country]
 
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    # IST = UTC + 5:30
+    ist_offset = timedelta(hours=5, minutes=30)
+    now_ist = datetime.now(timezone.utc) + ist_offset
+    generated_at_ist = now_ist.strftime("%Y-%m-%d %H:%M IST")
+
     print(f"\n{'='*60}")
-    print(f"  MarketIntel Analysis — {generated_at}")
+    print(f"  MarketIntel Analysis — {generated_at_ist}")
     print(f"  Countries: {countries} | Timeframes: {tfs}")
     print(f"{'='*60}\n")
 
-    # Structure: data[country][sector] = [stock_result, ...]
     output_data = {}
 
     for country in countries:
@@ -1185,7 +1312,6 @@ def main():
         universe = STOCKS.get(country, {})
 
         for sector, stocks in universe.items():
-            # Filter by sector if requested
             if args.sector and sector != args.sector:
                 continue
 
@@ -1193,7 +1319,6 @@ def main():
             output_data[country][sector] = []
 
             for ticker, name in stocks:
-                # Filter by ticker if requested
                 if args.ticker and ticker != args.ticker:
                     continue
 
@@ -1202,15 +1327,10 @@ def main():
                     if result:
                         output_data[country][sector].append(result)
 
-            # Remove empty sectors
             if not output_data[country][sector]:
                 del output_data[country][sector]
 
-        # If sector has no known stocks, it lands in Others via yfinance sector info
-        # (for manually added tickers outside the predefined list, sector="Others")
-
-    # Generate HTML
-    html = build_html(output_data, generated_at)
+    html = build_html(output_data, generated_at_ist)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
