@@ -1,0 +1,92 @@
+name: MarketIntel — Daily Analysis
+
+on:
+  # ── Scheduled runs ──────────────────────────────────────────
+  schedule:
+    # India market open: 09:15 IST = 03:45 UTC (Mon–Fri)
+    - cron: "45 3 * * 1-5"
+    # US market open: 09:30 EST = 14:30 UTC (Mon–Fri)
+    - cron: "30 14 * * 1-5"
+
+  # ── Manual trigger with options ─────────────────────────────
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "Country to scan"
+        required: false
+        default: "ALL"
+        type: choice
+        options: ["ALL", "IN", "US"]
+      timeframes:
+        description: "Timeframes (comma-separated: 15m,1H,1D,1W)"
+        required: false
+        default: "1D"
+      sector:
+        description: "Specific sector (leave blank for all)"
+        required: false
+        default: ""
+      ticker:
+        description: "Single ticker to analyse (leave blank for all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # needed to push to gh-pages
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python setup ─────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. Cache pip dependencies ────────────────────────────
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # ── 4. Install dependencies ──────────────────────────────
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── 5. Run analysis ──────────────────────────────────────
+      - name: Run MarketIntel Analysis
+        run: |
+          python analyze.py \
+            --country "${{ github.event.inputs.country || 'ALL' }}" \
+            --timeframes "${{ github.event.inputs.timeframes || '1D' }}" \
+            --sector "${{ github.event.inputs.sector || '' }}" \
+            --ticker "${{ github.event.inputs.ticker || '' }}" \
+            --output docs/index.html
+
+      # ── 6. Deploy to GitHub Pages ────────────────────────────
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          commit_message: "chore: auto-update analysis [skip ci]"
+          force_orphan: false
+
+      # ── 7. Summary ───────────────────────────────────────────
+      - name: Print summary
+        run: |
+          echo "### ✅ MarketIntel Analysis Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Country:** ${{ github.event.inputs.country || 'ALL' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timeframes:** ${{ github.event.inputs.timeframes || '1D' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Output:** docs/index.html deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
