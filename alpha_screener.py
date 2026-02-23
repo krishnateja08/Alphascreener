@@ -1021,8 +1021,11 @@ function loadStocks() {
   }
   mark('s2','done','✓'); document.getElementById('s2v').textContent=sec;
   const stocks = DATA[curCountry][sec] || [];
+  // Deduplicate by ticker so multi-timeframe runs don't show the same stock multiple times
+  const seen = new Set();
+  const unique = stocks.filter(s => { if (seen.has(s.ticker)) return false; seen.add(s.ticker); return true; });
   stkSel.innerHTML = '<option value="">— Select Company —</option>' +
-    stocks.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
+    unique.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
   stkSel.disabled = false;
   mark('s3','','3'); document.getElementById('s3v').textContent='Pending';
   document.getElementById('runBtn').disabled=true; curTicker=''; resetOut();
