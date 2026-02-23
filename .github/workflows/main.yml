@@ -14,7 +14,7 @@ on:
       timeframes:
         description: "Timeframes comma-separated: 15m,1H,1D,1W"
         required: false
-        default: "1D"
+        default: "15m,1H,1D,1W"
       sector:
         description: "Specific sector (leave blank for all)"
         required: false
@@ -62,7 +62,7 @@ jobs:
         run: |
           python alpha_screener.py \
             --country "${{ github.event.inputs.country || 'ALL' }}" \
-            --timeframes "${{ github.event.inputs.timeframes || '1D' }}" \
+            --timeframes "${{ github.event.inputs.timeframes || '15m,1H,1D,1W' }}" \
             --sector "${{ github.event.inputs.sector || '' }}" \
             --ticker "${{ github.event.inputs.ticker || '' }}" \
             --output docs/index.html
@@ -80,5 +80,5 @@ jobs:
         run: |
           echo "### ✅ MarketIntel Complete" >> $GITHUB_STEP_SUMMARY
           echo "- Country: ${{ github.event.inputs.country || 'ALL' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Timeframes: ${{ github.event.inputs.timeframes || '1D' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timeframes: ${{ github.event.inputs.timeframes || '15m,1H,1D,1W' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Dashboard deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
