@@ -1,6 +1,6 @@
 """
 MarketIntel — Stock Technical & Fundamental Analysis
-Supports: Nifty 50 (India) + S&P Top 50 (US)
+Supports: Nifty 50 (India) + S&P Top 50 (US) + Indian Indices
 Timeframes: 15m, 1H, 1D, 1W
 Output: Interactive HTML dashboard
 """
@@ -22,119 +22,155 @@ from pathlib import Path
 
 STOCKS = {
     "IN": {
+        "Financials": [
+            ("HDFCBANK.NS",   "HDFC Bank"),
+            ("ICICIBANK.NS",  "ICICI Bank"),
+            ("SBIN.NS",       "State Bank of India"),
+            ("BAJFINANCE.NS", "Bajaj Finance"),
+            ("KOTAKBANK.NS",  "Kotak Mahindra Bank"),
+            ("AXISBANK.NS",   "Axis Bank"),
+            ("BAJAJFINSV.NS", "Bajaj Finserv"),
+            ("INDUSINDBK.NS", "IndusInd Bank"),
+            ("SHRIRAMFIN.NS", "Shriram Finance"),
+            ("SBILIFE.NS",    "SBI Life"),
+            ("HDFCLIFE.NS",   "HDFC Life"),
+        ],
         "Technology": [
-            ("TCS.NS",       "Tata Consultancy Services"),
+            ("TCS.NS",       "TCS"),
             ("INFY.NS",      "Infosys"),
             ("WIPRO.NS",     "Wipro"),
-            ("HCLTECH.NS",   "HCL Technologies"),
+            ("HCLTECH.NS",   "HCL Tech"),
             ("TECHM.NS",     "Tech Mahindra"),
             ("LTIM.NS",      "LTIMindtree"),
-            ("MPHASIS.NS",   "Mphasis"),
-        ],
-        "Financials": [
-            ("HDFCBANK.NS",  "HDFC Bank"),
-            ("ICICIBANK.NS", "ICICI Bank"),
-            ("KOTAKBANK.NS", "Kotak Mahindra Bank"),
-            ("AXISBANK.NS",  "Axis Bank"),
-            ("SBIN.NS",      "State Bank of India"),
-            ("BAJFINANCE.NS","Bajaj Finance"),
-            ("BAJAJFINSV.NS","Bajaj Finserv"),
         ],
         "Energy": [
             ("RELIANCE.NS",  "Reliance Industries"),
             ("ONGC.NS",      "ONGC"),
             ("BPCL.NS",      "BPCL"),
-            ("IOC.NS",       "Indian Oil Corporation"),
-            ("ADANIGREEN.NS","Adani Green Energy"),
-        ],
-        "Healthcare": [
-            ("SUNPHARMA.NS", "Sun Pharmaceutical"),
-            ("DRREDDY.NS",   "Dr. Reddy's Laboratories"),
-            ("CIPLA.NS",     "Cipla"),
-            ("DIVISLAB.NS",  "Divi's Laboratories"),
-            ("APOLLOHOSP.NS","Apollo Hospitals"),
+            ("POWERGRID.NS", "Power Grid"),
+            ("NTPC.NS",      "NTPC"),
+            ("ADANIENT.NS",  "Adani Enterprises"),
         ],
         "Consumer": [
-            ("HINDUNILVR.NS","Hindustan Unilever"),
-            ("ITC.NS",       "ITC Limited"),
-            ("NESTLEIND.NS", "Nestle India"),
-            ("TITAN.NS",     "Titan Company"),
-            ("ASIANPAINT.NS","Asian Paints"),
-            ("MARUTI.NS",    "Maruti Suzuki"),
-            ("TATAMOTORS.NS","Tata Motors"),
+            ("HINDUNILVR.NS",  "Hindustan Unilever"),
+            ("ITC.NS",         "ITC"),
+            ("NESTLEIND.NS",   "Nestle India"),
+            ("TITAN.NS",       "Titan Company"),
+            ("ASIANPAINT.NS",  "Asian Paints"),
+            ("MARUTI.NS",      "Maruti Suzuki"),
+            ("BRITANNIA.NS",   "Britannia"),
+            ("TATACONSUM.NS",  "Tata Consumer"),
         ],
-        "Telecom": [
-            ("BHARTIARTL.NS","Bharti Airtel"),
+        "Automobile": [
+            ("TATAMOTORS.NS", "Tata Motors"),
+            ("M&M.NS",        "M&M"),
+            ("HEROMOTOCO.NS", "Hero MotoCorp"),
+            ("EICHERMOT.NS",  "Eicher Motors"),
+            ("BAJAJ-AUTO.NS", "Bajaj Auto"),
+        ],
+        "Healthcare": [
+            ("SUNPHARMA.NS", "Sun Pharma"),
+            ("DRREDDY.NS",   "Dr Reddy"),
+            ("CIPLA.NS",     "Cipla"),
+            ("DIVISLAB.NS",  "Divi's Lab"),
+            ("APOLLOHOSP.NS","Apollo Hospital"),
         ],
         "Industrials": [
-            ("ADANIENT.NS",  "Adani Enterprises"),
-            ("LTTS.NS",      "L&T Technology Services"),
-            ("POWERGRID.NS", "Power Grid Corporation"),
-            ("NTPC.NS",      "NTPC"),
+            ("LT.NS",          "L&T"),
+            ("SIEMENS.NS",     "Siemens India"),
+            ("ADANIPORTS.NS",  "Adani Ports"),
         ],
         "Metals & Mining": [
             ("TATASTEEL.NS", "Tata Steel"),
             ("JSWSTEEL.NS",  "JSW Steel"),
-            ("HINDALCO.NS",  "Hindalco Industries"),
+            ("HINDALCO.NS",  "Hindalco"),
             ("COALINDIA.NS", "Coal India"),
+        ],
+        "Cement": [
+            ("ULTRACEMCO.NS", "UltraTech Cement"),
+            ("GRASIM.NS",     "Grasim"),
+        ],
+        "Telecom": [
+            ("BHARTIARTL.NS", "Bharti Airtel"),
         ],
     },
     "US": {
         "Technology": [
+            ("NVDA",  "NVIDIA"),
             ("AAPL",  "Apple Inc."),
             ("MSFT",  "Microsoft"),
-            ("GOOGL", "Alphabet (Google)"),
-            ("NVDA",  "NVIDIA"),
-            ("META",  "Meta Platforms"),
             ("AMZN",  "Amazon"),
+            ("GOOGL", "Alphabet (Class A)"),
+            ("GOOG",  "Alphabet (Class C)"),
+            ("META",  "Meta Platforms"),
             ("TSLA",  "Tesla"),
-            ("ORCL",  "Oracle"),
-            ("CRM",   "Salesforce"),
-            ("ADBE",  "Adobe"),
+            ("AVGO",  "Broadcom"),
+            ("ORCL",  "Oracle Corporation"),
+            ("AMD",   "Advanced Micro Devices"),
+            ("MU",    "Micron Technology"),
+            ("NFLX",  "Netflix"),
+            ("PLTR",  "Palantir Technologies"),
+            ("CSCO",  "Cisco Systems"),
+            ("LRCX",  "Lam Research"),
+            ("AMAT",  "Applied Materials"),
+            ("IBM",   "IBM"),
+            ("INTC",  "Intel"),
         ],
         "Financials": [
             ("JPM",   "JPMorgan Chase"),
+            ("BRK-B", "Berkshire Hathaway"),
+            ("V",     "Visa Inc."),
+            ("MA",    "Mastercard"),
             ("BAC",   "Bank of America"),
-            ("WFC",   "Wells Fargo"),
             ("GS",    "Goldman Sachs"),
             ("MS",    "Morgan Stanley"),
-            ("BRK-B", "Berkshire Hathaway"),
-            ("V",     "Visa"),
-            ("MA",    "Mastercard"),
+            ("WFC",   "Wells Fargo"),
+            ("AXP",   "American Express"),
         ],
         "Energy": [
-            ("XOM",   "Exxon Mobil"),
-            ("CVX",   "Chevron"),
-            ("COP",   "ConocoPhillips"),
-            ("SLB",   "SLB (Schlumberger)"),
+            ("XOM",   "ExxonMobil"),
+            ("CVX",   "Chevron Corporation"),
         ],
         "Healthcare": [
-            ("JNJ",   "Johnson & Johnson"),
-            ("UNH",   "UnitedHealth Group"),
-            ("PFE",   "Pfizer"),
-            ("ABBV",  "AbbVie"),
-            ("MRK",   "Merck"),
             ("LLY",   "Eli Lilly"),
+            ("JNJ",   "Johnson & Johnson"),
+            ("ABBV",  "AbbVie"),
+            ("MRK",   "Merck & Co."),
+            ("UNH",   "UnitedHealth Group"),
         ],
         "Consumer": [
+            ("WMT",   "Walmart"),
+            ("COST",  "Costco"),
             ("HD",    "Home Depot"),
             ("MCD",   "McDonald's"),
-            ("NKE",   "Nike"),
-            ("COST",  "Costco"),
+            ("KO",    "Coca-Cola Company"),
             ("PG",    "Procter & Gamble"),
-            ("KO",    "Coca-Cola"),
+            ("PEP",   "PepsiCo"),
+            ("PM",    "Philip Morris International"),
         ],
         "Telecom": [
-            ("VZ",    "Verizon"),
-            ("T",     "AT&T"),
             ("TMUS",  "T-Mobile US"),
+            ("VZ",    "Verizon"),
         ],
         "Industrials": [
-            ("CAT",   "Caterpillar"),
-            ("BA",    "Boeing"),
-            ("HON",   "Honeywell"),
+            ("CAT",   "Caterpillar Inc."),
             ("GE",    "GE Aerospace"),
+            ("GEV",   "GE Vernova"),
+            ("RTX",   "RTX Corporation"),
+            ("LIN",   "Linde plc"),
         ],
+    }
+}
+
+# ─────────────────────────────────────────────
+# INDIAN INDICES
+# ─────────────────────────────────────────────
+
+INDICES = {
+    "IN": {
+        "^NSEI":   "Nifty 50",
+        "^NSEBANK":"Bank Nifty",
+        "NIFTY_FIN_SERVICE.NS": "Fin Nifty",
     }
 }
 
@@ -174,14 +210,16 @@ def fetch_ohlcv(ticker: str, tf: str):
         return None
 
 
-def fetch_fundamentals(ticker: str, is_india: bool) -> dict:
+def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> dict:
     currency = "₹" if is_india else "$"
     defaults = {
         "pe": "N/A", "eps": "N/A", "eps_trend": "neutral",
         "market_cap": "N/A", "week52_high": "N/A", "week52_low": "N/A",
         "dividend_yield": "N/A", "currency": currency,
-        "beta": "N/A", "sector": "N/A",
+        "beta": "N/A", "sector": "Index" if is_index else "N/A",
     }
+    if is_index:
+        return defaults
     try:
         info = yf.Ticker(ticker).info
         pe  = info.get("trailingPE") or info.get("forwardPE")
@@ -510,10 +548,10 @@ def compute_signal(ind: dict, fund: dict) -> dict:
     }
 
 # ─────────────────────────────────────────────
-# ANALYSE ONE STOCK
+# ANALYSE ONE STOCK / INDEX
 # ─────────────────────────────────────────────
 
-def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
+def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str, is_index: bool = False):
     is_india = (country == "IN")
     currency = "₹" if is_india else "$"
     print(f"  Analysing {ticker} ({name}) [{tf}] ...", end=" ", flush=True)
@@ -525,7 +563,7 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
 
     ind  = calculate_indicators(df)
     sr   = calculate_sr(df)
-    fund = fetch_fundamentals(ticker, is_india)
+    fund = fetch_fundamentals(ticker, is_india, is_index)
 
     curr_price = float(df["close"].iloc[-1])
     prev_price = float(df["close"].iloc[-2]) if len(df) > 1 else curr_price
@@ -549,6 +587,7 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str):
         "country":     country,
         "country_flag":"🇮🇳" if is_india else "🇺🇸",
         "sector":      sector,
+        "is_index":    is_index,
         "timeframe":   tf,
         "price":       fmt_price(curr_price),
         "price_raw":   curr_price,
@@ -623,6 +662,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   --ar:#ff3d6b;
   --ay:#ffd600;
   --ap:#a855f7;
+  --ao:#ff9500;
   --text:#c8d8ee;
   --text-bright:#eef6ff;
   --label:#7ab4d4;
@@ -644,42 +684,50 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .logo-title{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text-bright);}
 .logo-title span{color:var(--ab);}
 .logo-sub{font-family:'Space Mono',monospace;font-size:10px;color:#6aaace;margin-top:3px;letter-spacing:.5px;}
-
-/* Generated block — highlighted in cyan */
 .hdr-right{text-align:right;}
-.gen-block{
-  display:inline-flex;flex-direction:column;gap:5px;
-  background:rgba(0,212,255,.06);
-  border:1px solid rgba(0,212,255,.2);
-  border-radius:10px;
-  padding:10px 16px;
-  min-width:210px;
-}
+.gen-block{display:inline-flex;flex-direction:column;gap:5px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 16px;min-width:210px;}
 .gen-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ab);opacity:.7;}
 .gen-time{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--ab);}
 .gen-live{font-family:'Space Mono',monospace;font-size:11px;color:#5fa8c0;margin-top:2px;display:flex;align-items:center;gap:6px;justify-content:flex-end;}
 .live{display:inline-block;width:6px;height:6px;background:var(--ag);border-radius:50%;animation:blink 1.4s infinite;flex-shrink:0;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.12}}
 
-/* ─── FILTER PANEL ─── */
-.fp{
-  background:rgba(8,18,34,.9);
-  border:1px solid rgba(0,212,255,.15);
-  border-radius:16px;padding:24px 28px;margin-bottom:28px;
-  box-shadow:0 0 40px rgba(0,212,255,.04);
+/* ─── MODE TOGGLE ─── */
+.mode-toggle{
+  display:flex;gap:0;background:rgba(0,0,0,.4);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-bottom:20px;
 }
+.mode-btn{
+  flex:1;padding:14px 20px;border:none;background:transparent;
+  color:#5a8aaa;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;
+  letter-spacing:.3px;position:relative;
+}
+.mode-btn.active-stocks{background:rgba(0,212,255,.12);color:var(--ab);box-shadow:inset 0 -2px 0 var(--ab);}
+.mode-btn.active-indices{background:rgba(255,149,0,.12);color:var(--ao);box-shadow:inset 0 -2px 0 var(--ao);}
+.mode-sep{width:1px;background:var(--border);}
+
+/* ─── FILTER PANEL ─── */
+.fp{background:rgba(8,18,34,.9);border:1px solid rgba(0,212,255,.15);border-radius:16px;padding:24px 28px;margin-bottom:28px;box-shadow:0 0 40px rgba(0,212,255,.04);}
 .fp-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#5a8aaa;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
 .fp-title::after{content:'';flex:1;height:1px;background:rgba(0,212,255,.12);}
+
+/* Index filter panel — orange tint */
+.fp-index{border-color:rgba(255,149,0,.2);box-shadow:0 0 40px rgba(255,149,0,.03);}
+.fp-index .fp-title{color:#aa6600;}
+.fp-index .fp-title::after{background:rgba(255,149,0,.15);}
+
 .frow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;}
 .fg{display:flex;flex-direction:column;gap:7px;min-width:0;}
 .fl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7aaac8;}
-.fg:nth-child(1) .fl{color:#00ee77;}
-.fg:nth-child(2) .fl{color:#00b8dd;}
-.fg:nth-child(3) .fl{color:#aa77ff;}
-.fg:nth-child(4) .fl{color:#ffcc00;}
-.fg:nth-child(5) .fl{color:#5a7090;}
+
+/* Index label colours */
+.fl-idx{color:#cc7700 !important;}
+.fl-tf{color:#a855f7 !important;}
+
 .btn-group{display:flex;gap:5px;flex-wrap:wrap;}
-/* Timeframe buttons — colour-coded when inactive */
+
+/* Timeframe buttons */
 .btn-group .btn:nth-child(1){border-color:rgba(255,214,0,.25);color:#cc9900;}
 .btn-group .btn:nth-child(2){border-color:rgba(168,85,247,.25);color:#9955cc;}
 .btn-group .btn:nth-child(3){border-color:rgba(0,212,255,.25);color:#0099bb;}
@@ -688,70 +736,45 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .btn-group .btn:nth-child(2):hover,.btn-group .btn:nth-child(2).active{background:rgba(168,85,247,.15);border-color:var(--ap);color:var(--ap);box-shadow:0 0 10px rgba(168,85,247,.2);}
 .btn-group .btn:nth-child(3):hover,.btn-group .btn:nth-child(3).active{background:rgba(0,212,255,.15);border-color:var(--ab);color:var(--ab);box-shadow:0 0 10px rgba(0,212,255,.2);}
 .btn-group .btn:nth-child(4):hover,.btn-group .btn:nth-child(4).active{background:rgba(0,255,136,.15);border-color:var(--ag);color:var(--ag);box-shadow:0 0 10px rgba(0,255,136,.2);}
-.btn{
-  padding:9px 16px;border-radius:8px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:#90bcd4;
-  font-family:'Space Mono',monospace;font-size:11px;
-  cursor:pointer;transition:all .2s;white-space:nowrap;
-  letter-spacing:.3px;
-}
+
+/* Country buttons */
+.btn-country .btn:nth-child(1){border-color:rgba(0,255,136,.25);color:#009944;}
+.btn-country .btn:nth-child(2){border-color:rgba(0,212,255,.25);color:#0099bb;}
+
+.btn{padding:9px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#90bcd4;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.3px;}
 .btn:hover{border-color:var(--ab);color:#d0eeff;background:rgba(0,212,255,.08);}
-.btn.active{
-  background:rgba(0,212,255,.18);
-  border-color:var(--ab);
-  color:#fff;
-  font-weight:700;
-  box-shadow:0 0 12px rgba(0,212,255,.2);
+.btn.active{background:rgba(0,212,255,.18);border-color:var(--ab);color:#fff;font-weight:700;box-shadow:0 0 12px rgba(0,212,255,.2);}
+.btn.c-in{background:rgba(0,255,136,.12);border-color:rgba(0,255,136,.4);color:#00ee77;font-weight:700;box-shadow:0 0 10px rgba(0,255,136,.12);}
+.btn.c-us{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.4);color:#00d4ff;font-weight:700;box-shadow:0 0 10px rgba(0,212,255,.12);}
+
+/* Index buttons */
+.idx-btn{
+  padding:11px 22px;border-radius:10px;
+  border:1px solid rgba(255,149,0,.25);
+  background:rgba(255,149,0,.06);
+  color:#cc7700;
+  font-family:'Space Mono',monospace;font-size:12px;
+  cursor:pointer;transition:all .2s;white-space:nowrap;font-weight:700;
 }
-.btn.c-in{
-  background:rgba(0,255,136,.12);
-  border-color:rgba(0,255,136,.4);
-  color:#00ee77;
-  font-weight:700;
-  box-shadow:0 0 10px rgba(0,255,136,.12);
-}
-.btn.c-us{
-  background:rgba(0,212,255,.12);
-  border-color:rgba(0,212,255,.4);
-  color:#00d4ff;
-  font-weight:700;
-  box-shadow:0 0 10px rgba(0,212,255,.12);
-}
+.idx-btn:hover{border-color:var(--ao);color:var(--ao);background:rgba(255,149,0,.14);}
+.idx-btn.active{background:rgba(255,149,0,.2);border-color:var(--ao);color:#ffaa22;box-shadow:0 0 14px rgba(255,149,0,.25);font-weight:800;}
+
 .sel-wrap{position:relative;}
 .sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#5a8aaa;font-size:11px;pointer-events:none;}
-select{
-  padding:9px 32px 9px 13px;
-  border-radius:8px;
-  border:1px solid rgba(0,212,255,.25);
-  background:rgba(0,20,40,.7);
-  color:#c8e8ff;
-  font-family:'Space Mono',monospace;font-size:11px;
-  cursor:pointer;outline:none;appearance:none;
-  min-width:190px;transition:all .2s;width:100%;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
-}
+select{padding:9px 32px 9px 13px;border-radius:8px;border:1px solid rgba(0,212,255,.25);background:rgba(0,20,40,.7);color:#c8e8ff;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;outline:none;appearance:none;min-width:190px;transition:all .2s;width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
 select:focus{border-color:var(--ab);box-shadow:0 0 0 2px rgba(0,212,255,.15),inset 0 1px 0 rgba(255,255,255,.04);}
 select:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);}
 select option{background:#061020;color:#c8e8ff;}
-.run-btn{
-  padding:10px 28px;border-radius:10px;
-  background:linear-gradient(135deg,var(--ab),var(--ap));
-  border:none;color:#000;font-family:'Syne',sans-serif;
-  font-weight:800;font-size:13px;cursor:pointer;
-  letter-spacing:.5px;transition:transform .15s,box-shadow .15s;white-space:nowrap;
-}
+
+.run-btn{padding:10px 28px;border-radius:10px;background:linear-gradient(135deg,var(--ab),var(--ap));border:none;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.5px;transition:transform .15s,box-shadow .15s;white-space:nowrap;}
 .run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,.28);}
 .run-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
 
+.run-btn-idx{background:linear-gradient(135deg,var(--ao),#ff6600);}
+.run-btn-idx:hover{box-shadow:0 8px 24px rgba(255,149,0,.28);}
+
 /* ─── FLOW BAR ─── */
-.flow{
-  display:flex;margin-top:20px;
-  background:rgba(0,10,25,.6);
-  border:1px solid rgba(0,212,255,.15);
-  border-radius:10px;overflow:hidden;
-}
+.flow{display:flex;margin-top:20px;background:rgba(0,10,25,.6);border:1px solid rgba(0,212,255,.15);border-radius:10px;overflow:hidden;}
 .fs{flex:1;padding:10px 14px;display:flex;align-items:center;gap:9px;font-size:11px;border-right:1px solid rgba(0,212,255,.08);transition:all .3s;min-width:0;}
 .fs:last-child{border-right:none;}
 .fs.done{background:rgba(0,255,136,.07);border-right-color:rgba(0,255,136,.1);}
@@ -776,20 +799,20 @@ select option{background:#061020;color:#c8e8ff;}
 
 /* ─── ANALYSIS CARD ─── */
 .ac{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
-.ac-hdr{
-  padding:22px 26px;border-bottom:1px solid var(--border);
-  background:linear-gradient(135deg,rgba(0,212,255,.03),rgba(168,85,247,.03));
-  display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;
-}
+.ac.idx-card{border-color:rgba(255,149,0,.25);}
+.ac-hdr{padding:22px 26px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(0,212,255,.03),rgba(168,85,247,.03));display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;}
+.ac.idx-card .ac-hdr{background:linear-gradient(135deg,rgba(255,149,0,.04),rgba(255,100,0,.02));}
 .ac-name{font-size:26px;font-weight:800;letter-spacing:-.4px;color:#f0f8ff;}
 .ac-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px;}
 .mtag{padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid;}
 .mc{background:rgba(0,255,136,.12);color:#00ee77;border-color:rgba(0,255,136,.35);font-size:11px;}
 .ms{background:rgba(168,85,247,.12);color:#cc88ff;border-color:rgba(168,85,247,.35);font-size:11px;}
 .mt{background:rgba(0,212,255,.12);color:#00e0ff;border-color:rgba(0,212,255,.35);font-size:11px;}
+.mi{background:rgba(255,149,0,.12);color:#ffaa22;border-color:rgba(255,149,0,.35);font-size:11px;}
 .ticker-tag{font-family:'Space Mono',monospace;font-size:11px;color:#88aac8;font-weight:600;}
 .ac-pb{text-align:right;}
 .ac-price{font-family:'Space Mono',monospace;font-size:34px;font-weight:800;color:#00e5ff;}
+.ac.idx-card .ac-price{color:var(--ao);}
 .chg-p{color:#00ff88;font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;font-weight:700;}
 .chg-n{color:#ff5577;font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;font-weight:700;}
 .sig{padding:7px 18px;border-radius:8px;font-weight:800;font-size:12px;letter-spacing:.5px;display:inline-block;margin-top:9px;}
@@ -799,10 +822,7 @@ select option{background:#061020;color:#c8e8ff;}
 .sig-watch{background:rgba(0,212,255,.07);color:var(--ab);border:1px solid rgba(0,212,255,.2);}
 
 .ac-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;background:rgba(4,10,20,.5);}
-.sec-lbl{
-  font-size:10px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;
-  color:#a8d8f8;margin-bottom:14px;display:flex;align-items:center;gap:10px;
-}
+.sec-lbl{font-size:10px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#a8d8f8;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
 .sec-lbl::after{content:'';flex:1;height:1px;background:rgba(120,180,220,.25);}
 
 /* ─── TOW ─── */
@@ -823,13 +843,7 @@ select option{background:#061020;color:#c8e8ff;}
 
 /* ─── INDICATOR GRID ─── */
 .ig{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-.ic{
-  background:rgba(12,22,40,.95);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:11px;padding:14px;
-  display:flex;flex-direction:column;gap:7px;
-  position:relative;overflow:hidden;
-}
+.ic{background:rgba(12,22,40,.95);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:14px;display:flex;flex-direction:column;gap:7px;position:relative;overflow:hidden;}
 .ic.bull{border-color:rgba(0,255,136,.2);}
 .ic.bear{border-color:rgba(255,61,107,.2);}
 .ic.neut{border-color:rgba(255,214,0,.2);}
@@ -850,12 +864,7 @@ select option{background:#061020;color:#c8e8ff;}
 .rsi-fill{height:100%;border-radius:2px;}
 
 /* ─── ATR ─── */
-.atr-block{
-  background:rgba(255,214,0,.06);
-  border:1px solid rgba(255,214,0,.22);
-  border-radius:11px;padding:16px 20px;
-  display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:18px;align-items:center;
-}
+.atr-block{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.22);border-radius:11px;padding:16px 20px;display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:18px;align-items:center;}
 .atr-lbl{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#ffcc00;}
 .atr-v{font-family:'Space Mono',monospace;font-size:26px;font-weight:800;color:#ffd600;}
 .atr-d{background:rgba(255,214,0,.12);align-self:stretch;}
@@ -891,51 +900,36 @@ select option{background:#061020;color:#c8e8ff;}
 .eps-d{color:var(--ar);}
 .eps-f{color:var(--ay);}
 
-/* ─── FOOTER ─── */
-footer{
-  text-align:center;padding:24px 0 10px;color:#4a6a88;
-  font-size:9px;font-family:'Space Mono',monospace;
-  border-top:1px solid var(--border);margin-top:36px;line-height:2.2;
+/* Index — no fundamentals notice */
+.idx-notice{
+  background:rgba(255,149,0,.06);border:1px solid rgba(255,149,0,.2);
+  border-radius:10px;padding:14px 18px;
+  font-family:'Space Mono',monospace;font-size:11px;color:#aa7700;
+  text-align:center;
 }
+
+/* ─── FOOTER ─── */
+footer{text-align:center;padding:24px 0 10px;color:#4a6a88;font-size:9px;font-family:'Space Mono',monospace;border-top:1px solid var(--border);margin-top:36px;line-height:2.2;}
 footer span{color:#6a8aaa;}
 
 /* ─── RESPONSIVE ─── */
-@media(max-width:1100px){
-  .ig{grid-template-columns:repeat(3,1fr);}
-  .fundg{grid-template-columns:repeat(3,1fr);}
-}
+@media(max-width:1100px){.ig{grid-template-columns:repeat(3,1fr);}.fundg{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:800px){
-  .wrap{padding:14px 16px;}
-  .hdr{flex-direction:column;align-items:flex-start;}
-  .hdr-right{width:100%;}
-  .gen-block{width:100%;box-sizing:border-box;min-width:unset;}
-  .gen-live{justify-content:flex-start;}
-  .frow{flex-direction:column;gap:14px;}
-  .fg{width:100%;}
-  .sel-wrap{width:100%;}
-  select{min-width:unset;width:100%;}
-  .btn-group{width:100%;}
+  .wrap{padding:14px 16px;}.hdr{flex-direction:column;align-items:flex-start;}.hdr-right{width:100%;}
+  .gen-block{width:100%;box-sizing:border-box;min-width:unset;}.gen-live{justify-content:flex-start;}
+  .frow{flex-direction:column;gap:14px;}.fg{width:100%;}.sel-wrap{width:100%;}
+  select{min-width:unset;width:100%;}.btn-group{width:100%;}
   .run-btn{width:100%;text-align:center;padding:12px 28px;}
-  .flow{flex-direction:column;}
-  .fs{border-right:none;border-bottom:1px solid var(--border);}
-  .fs:last-child{border-bottom:none;}
-  .ig{grid-template-columns:repeat(2,1fr);}
-  .fundg{grid-template-columns:repeat(2,1fr);}
-  .atr-block{grid-template-columns:1fr;gap:12px;}
-  .atr-d{display:none;}
-  .srg{grid-template-columns:1fr;}
-  .ac-hdr{flex-direction:column;}
-  .ac-pb{text-align:left;}
-  .ac-price{font-size:26px;}
-  .ac-name{font-size:20px;}
+  .flow{flex-direction:column;}.fs{border-right:none;border-bottom:1px solid var(--border);}.fs:last-child{border-bottom:none;}
+  .ig{grid-template-columns:repeat(2,1fr);}.fundg{grid-template-columns:repeat(2,1fr);}
+  .atr-block{grid-template-columns:1fr;gap:12px;}.atr-d{display:none;}.srg{grid-template-columns:1fr;}
+  .ac-hdr{flex-direction:column;}.ac-pb{text-align:left;}.ac-price{font-size:26px;}.ac-name{font-size:20px;}
+  .mode-toggle{flex-direction:column;}
 }
 @media(max-width:480px){
-  .ig{grid-template-columns:1fr 1fr;}
-  .fundg{grid-template-columns:1fr 1fr;}
-  .logo-title{font-size:19px;}
-  .tow-bear-l,.tow-bull-l{font-size:10px;}
-  .ac-body{padding:16px;}
-  .ac-hdr{padding:16px;}
+  .ig{grid-template-columns:1fr 1fr;}.fundg{grid-template-columns:1fr 1fr;}
+  .logo-title{font-size:19px;}.tow-bear-l,.tow-bull-l{font-size:10px;}
+  .ac-body{padding:16px;}.ac-hdr{padding:16px;}
 }
 </style>
 </head>
@@ -948,26 +942,37 @@ footer span{color:#6a8aaa;}
     <div class="logo-icon">📈</div>
     <div>
       <div class="logo-title">Market<span>Intel</span></div>
-      <div class="logo-sub" style="color:#6aaace;letter-spacing:1.5px;">NIFTY 50 · S&P TOP 50 · MULTI-TIMEFRAME ANALYSIS</div>
+      <div class="logo-sub">NIFTY 50 · S&P TOP 50 · INDICES · MULTI-TIMEFRAME</div>
     </div>
   </div>
   <div class="hdr-right">
     <div class="gen-block">
-      <div class="gen-label" style="color:#00c0e8;font-size:9px;letter-spacing:2px;">Generated (IST)</div>
+      <div class="gen-label">Generated (IST)</div>
       <div class="gen-time">__GENERATED_IST__</div>
       <div class="gen-live"><span class="live"></span><span id="liveClk">--:--:-- IST</span></div>
     </div>
   </div>
 </div>
 
-<!-- FILTER PANEL -->
-<div class="fp">
+<!-- MODE TOGGLE -->
+<div class="mode-toggle">
+  <button class="mode-btn active-stocks" id="modeStocks" onclick="setMode('stocks',this)">
+    📊 &nbsp;Stock Analysis &nbsp;<small style="opacity:.6;font-weight:400;font-size:12px;">India · USA</small>
+  </button>
+  <div class="mode-sep"></div>
+  <button class="mode-btn" id="modeIndices" onclick="setMode('indices',this)">
+    🏦 &nbsp;Index Analysis &nbsp;<small style="opacity:.6;font-weight:400;font-size:12px;">Nifty 50 · Bank Nifty · Fin Nifty</small>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════ STOCK FILTER PANEL ════════════════════════════════════ -->
+<div class="fp" id="panelStocks">
   <div class="fp-title">🎛️ Stock Selection Filters</div>
   <div class="frow">
 
     <div class="fg">
       <div class="fl">① Country</div>
-      <div class="btn-group">
+      <div class="btn-group btn-country">
         <button class="btn c-in" id="btn-IN" onclick="selCountry('IN',this)">🇮🇳 India</button>
         <button class="btn"      id="btn-US" onclick="selCountry('US',this)">🇺🇸 United States</button>
       </div>
@@ -993,10 +998,10 @@ footer span{color:#6a8aaa;}
 
     <div class="fg">
       <div class="fl">④ Timeframe</div>
-      <div class="btn-group">
+      <div class="btn-group" id="tfBtns">
         <button class="btn" onclick="setTF('15m',this)">15m</button>
         <button class="btn" onclick="setTF('1H',this)">1H</button>
-        <button class="btn active" id="btn-tf-1D" onclick="setTF('1D',this)">1D</button>
+        <button class="btn active" onclick="setTF('1D',this)">1D</button>
         <button class="btn" onclick="setTF('1W',this)">1W</button>
       </div>
     </div>
@@ -1017,12 +1022,44 @@ footer span{color:#6a8aaa;}
   </div>
 </div>
 
+<!-- ════════════════════════════════════ INDEX FILTER PANEL ════════════════════════════════════ -->
+<div class="fp fp-index" id="panelIndices" style="display:none;">
+  <div class="fp-title">🏦 Indian Index Selection</div>
+  <div class="frow">
+
+    <div class="fg">
+      <div class="fl fl-idx">① Select Index</div>
+      <div class="btn-group" id="idxBtns">
+        <button class="idx-btn active" onclick="selIndex('^NSEI','Nifty 50',this)">📈 Nifty 50</button>
+        <button class="idx-btn" onclick="selIndex('^NSEBANK','Bank Nifty',this)">🏦 Bank Nifty</button>
+        <button class="idx-btn" onclick="selIndex('NIFTY_FIN_SERVICE.NS','Fin Nifty',this)">💳 Fin Nifty</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <div class="fl fl-tf">② Timeframe</div>
+      <div class="btn-group" id="idxTfBtns">
+        <button class="btn" onclick="setIdxTF('15m',this)">15m</button>
+        <button class="btn" onclick="setIdxTF('1H',this)">1H</button>
+        <button class="btn active" onclick="setIdxTF('1D',this)">1D</button>
+        <button class="btn" onclick="setIdxTF('1W',this)">1W</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <div class="fl">&nbsp;</div>
+      <button class="run-btn run-btn-idx" id="runIdxBtn" onclick="showIndexCard()">📊 Analyze Index</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- OUTPUT -->
 <div id="out">
   <div class="ph">
     <div class="ph-icon">🔍</div>
-    <div class="ph-text">Select Country → Sector → Stock → Timeframe</div>
-    <div class="ph-sub">Then click ⚡ Analyze to see full technical + fundamental analysis</div>
+    <div class="ph-text">Select a mode above to get started</div>
+    <div class="ph-sub">Stock Analysis → Country → Sector → Stock &nbsp;|&nbsp; Index Analysis → Pick Index</div>
   </div>
 </div>
 
@@ -1033,130 +1070,177 @@ footer span{color:#6a8aaa;}
 </div>
 
 <script>
-const DATA = __DATA_JSON__;
+const DATA    = __DATA_JSON__;
+const IDX_DATA = __IDX_JSON__;
 
 let curCountry = 'IN', curTF = '1D', curTicker = '';
-
-/* ── Live IST Clock — updates every second, no layout shift ── */
-function updateClock() {
-  const now = new Date();
-  const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  const hh = String(ist.getHours()).padStart(2,'0');
-  const mm = String(ist.getMinutes()).padStart(2,'0');
-  const ss = String(ist.getSeconds()).padStart(2,'0');
-  const el = document.getElementById('liveClk');
-  if (el) el.textContent = `${hh}:${mm}:${ss} IST`;
-}
-updateClock();
-setInterval(updateClock, 1000);
-
-/* ── Silent background refresh — every 60s, no flicker or layout changes ── */
+let curIdxTicker = '^NSEI', curIdxName = 'Nifty 50', curIdxTF = '1D';
+let curMode = 'stocks';
 let _refreshCard = null;
-setInterval(() => { if (_refreshCard) _refreshCard(); }, 60000);
 
-/* ── Country Select ── */
-function selCountry(code, btn) {
-  curCountry = code;
-  ['IN','US'].forEach(c => document.getElementById('btn-'+c).className = 'btn');
-  btn.className = code==='IN' ? 'btn c-in' : 'btn c-us';
-  document.getElementById('s1v').textContent = code==='IN' ? '🇮🇳 India' : '🇺🇸 USA';
+/* ── Live IST Clock ── */
+function updateClock(){
+  const now=new Date();
+  const ist=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  const hh=String(ist.getHours()).padStart(2,'0');
+  const mm=String(ist.getMinutes()).padStart(2,'0');
+  const ss=String(ist.getSeconds()).padStart(2,'0');
+  const el=document.getElementById('liveClk');
+  if(el) el.textContent=`${hh}:${mm}:${ss} IST`;
+}
+updateClock(); setInterval(updateClock,1000);
+setInterval(()=>{if(_refreshCard)_refreshCard();},60000);
+
+/* ── Mode toggle ── */
+function setMode(mode, btn){
+  curMode = mode;
+  document.getElementById('modeStocks').className  = 'mode-btn' + (mode==='stocks'?' active-stocks':'');
+  document.getElementById('modeIndices').className = 'mode-btn' + (mode==='indices'?' active-indices':'');
+  document.getElementById('panelStocks').style.display  = mode==='stocks'  ? '' : 'none';
+  document.getElementById('panelIndices').style.display = mode==='indices' ? '' : 'none';
+  resetOut();
+  _refreshCard = null;
+}
+
+/* ─────────────── STOCK MODE ─────────────── */
+function selCountry(code, btn){
+  curCountry=code;
+  ['IN','US'].forEach(c=>document.getElementById('btn-'+c).className='btn');
+  btn.className=code==='IN'?'btn c-in':'btn c-us';
+  document.getElementById('s1v').textContent=code==='IN'?'🇮🇳 India':'🇺🇸 USA';
   mark('s1','done','✓');
-  const sectors = Object.keys(DATA[code] || {});
-  const secSel = document.getElementById('secSel');
-  secSel.innerHTML = '<option value="">— Select Sector —</option>' +
-    sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const sectors=Object.keys(DATA[code]||{});
+  const secSel=document.getElementById('secSel');
+  secSel.innerHTML='<option value="">— Select Sector —</option>'+sectors.map(s=>`<option value="${s}">${s}</option>`).join('');
   resetStock(); resetOut();
   mark('s2','','2'); document.getElementById('s2v').textContent='Pending';
   mark('s3','','3'); document.getElementById('s3v').textContent='Pending';
 }
 
-function loadStocks() {
-  const sec = document.getElementById('secSel').value;
-  const stkSel = document.getElementById('stkSel');
-  if (!sec) {
+function loadStocks(){
+  const sec=document.getElementById('secSel').value;
+  const stkSel=document.getElementById('stkSel');
+  if(!sec){
     stkSel.innerHTML='<option>— Select Sector First —</option>';
     stkSel.disabled=true;
     document.getElementById('runBtn').disabled=true;
-    resetOut();
-    mark('s2','','2'); document.getElementById('s2v').textContent='Pending';
+    resetOut(); mark('s2','','2'); document.getElementById('s2v').textContent='Pending';
     return;
   }
   mark('s2','done','✓'); document.getElementById('s2v').textContent=sec;
-  const stocks = DATA[curCountry][sec] || [];
-  // Each stock appears exactly once (timeframes nested inside .timeframes{})
-  stkSel.innerHTML = '<option value="">— Select Company —</option>' +
-    stocks.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
-  stkSel.disabled = false;
+  const stocks=DATA[curCountry][sec]||[];
+  stkSel.innerHTML='<option value="">— Select Company —</option>'+stocks.map(s=>`<option value="${s.ticker}">${s.name} (${s.ticker})</option>`).join('');
+  stkSel.disabled=false;
   mark('s3','','3'); document.getElementById('s3v').textContent='Pending';
   document.getElementById('runBtn').disabled=true; curTicker=''; resetOut();
 }
 
-function stkChosen() {
-  curTicker = document.getElementById('stkSel').value;
-  if (curTicker) {
+function stkChosen(){
+  curTicker=document.getElementById('stkSel').value;
+  if(curTicker){
     mark('s3','done','✓'); document.getElementById('s3v').textContent=curTicker;
     document.getElementById('runBtn').disabled=false;
-  } else {
+  }else{
     mark('s3','','3'); document.getElementById('s3v').textContent='Pending';
     document.getElementById('runBtn').disabled=true;
   }
   resetOut();
 }
 
-function setTF(tf, btn) {
-  curTF = tf;
-  document.querySelectorAll('.btn[onclick*="setTF"]').forEach(b=>b.className='btn');
+function setTF(tf,btn){
+  curTF=tf;
+  document.querySelectorAll('#tfBtns .btn').forEach(b=>b.className='btn');
   btn.className='btn active';
   document.getElementById('s4v').textContent=tf;
   mark('s4','done','✓');
-  if (document.getElementById('out').querySelector('.ac')) showCard(true);
+  if(document.getElementById('out').querySelector('.ac:not(.idx-card)')) showCard(true);
 }
 
-function mark(id, cls, num) {
-  const el = document.getElementById(id);
-  el.className = 'fs' + (cls ? ' '+cls : '');
-  el.querySelector('.fn').textContent = num;
+function mark(id,cls,num){
+  const el=document.getElementById(id);
+  el.className='fs'+(cls?' '+cls:'');
+  el.querySelector('.fn').textContent=num;
 }
 
-function resetStock() {
+function resetStock(){
   const s=document.getElementById('stkSel');
   s.innerHTML='<option>— Select Sector First —</option>';
   s.disabled=true;
   document.getElementById('runBtn').disabled=true;
-  curTicker='';
-  _refreshCard=null;
+  curTicker=''; _refreshCard=null;
 }
 
-function resetOut() {
+function resetOut(){
   document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">🔍</div><div class="ph-text">Select Country → Sector → Stock → Timeframe</div><div class="ph-sub">Then click ⚡ Analyze to see full technical + fundamental analysis</div></div>`;
+  if(curMode==='indices'){
+    document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">🏦</div><div class="ph-text">Pick an index and timeframe</div><div class="ph-sub">Then click 📊 Analyze Index</div></div>`;
+  }
   mark('s5','cur','5'); document.getElementById('s5v').textContent='Waiting...';
   _refreshCard=null;
 }
 
-/* ── Build card HTML (pure function — no DOM side effects) ── */
-function buildCardHTML(d) {
-  const sigCls   = {BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'}[d.signal]||'sig-watch';
-  const sigEmoji = {BUY:'✅',SELL:'❌',HOLD:'⏸',WATCH:'👁'}[d.signal]||'⚠️';
-  const scoreCls = d.score>=65?'buy':d.score<=40?'sell':d.score>=50?'watch':'hold';
+/* ─────────────── INDEX MODE ─────────────── */
+function selIndex(ticker, name, btn){
+  curIdxTicker=ticker; curIdxName=name;
+  document.querySelectorAll('#idxBtns .idx-btn').forEach(b=>b.className='idx-btn');
+  btn.className='idx-btn active';
+}
 
-  const rsiCls  = r => r>70?'bear':r<35?'bull':'neut';
-  const rsiStat = r => r>70?'● Overbought':r<35?'● Oversold — Opportunity':'● Neutral Zone';
-  const rsiColor= r => r>70?'var(--ar)':r<35?'var(--ag)':'var(--ay)';
-  const rsiPct  = Math.min(d.rsi||0,100);
+function setIdxTF(tf,btn){
+  curIdxTF=tf;
+  document.querySelectorAll('#idxTfBtns .btn').forEach(b=>b.className='btn');
+  btn.className='btn active';
+  if(document.getElementById('out').querySelector('.idx-card')) showIndexCard(true);
+}
 
-  const volStr   = d.volume_ratio!=null ? `${d.volume_ratio}x Avg` : 'N/A';
-  const stochStr = d.stoch_k!=null ? `${d.stoch_k}` : 'N/A';
-  const stochCls = d.stoch_bull ? 'bull' : 'bear';
-  const stochStat= d.stoch_k>80?'● Overbought':d.stoch_k<20?'● Oversold':'● In Range';
+function showIndexCard(silent=false){
+  const entry=IDX_DATA[curIdxTicker];
+  const d=entry?(entry[curIdxTF]||Object.values(entry)[0]):null;
+  if(!d){
+    if(!silent) document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data for ${curIdxName} on ${curIdxTF}</div><div class="ph-sub">Try a different timeframe or re-run the script</div></div>`;
+    return;
+  }
+  const html=buildCardHTML(d,true);
+  if(silent){
+    const outEl=document.getElementById('out');
+    const existing=outEl.querySelector('.idx-card');
+    if(!existing){outEl.innerHTML=html;return;}
+    const priceEl=existing.querySelector('.ac-price');
+    const chgEl=existing.querySelector('.chg-p,.chg-n');
+    if(priceEl) priceEl.textContent=d.price;
+    if(chgEl){chgEl.className=d.change_pos?'chg-p':'chg-n';chgEl.textContent=(d.change_pos?'▲ ':'▼ ')+d.change;}
+  }else{
+    document.getElementById('out').innerHTML=html;
+  }
+  _refreshCard=()=>showIndexCard(true);
+}
 
-  const atrSection = d.signal==='BUY' ? `
+/* ─────────────── BUILD CARD ─────────────── */
+function buildCardHTML(d, isIndex=false){
+  const sigCls={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'}[d.signal]||'sig-watch';
+  const sigEmoji={BUY:'✅',SELL:'❌',HOLD:'⏸',WATCH:'👁'}[d.signal]||'⚠️';
+  const scoreCls=d.score>=65?'buy':d.score<=40?'sell':d.score>=50?'watch':'hold';
+
+  const rsiCls=r=>r>70?'bear':r<35?'bull':'neut';
+  const rsiStat=r=>r>70?'● Overbought':r<35?'● Oversold — Opportunity':'● Neutral Zone';
+  const rsiColor=r=>r>70?'var(--ar)':r<35?'var(--ag)':'var(--ay)';
+  const rsiPct=Math.min(d.rsi||0,100);
+
+  const volStr=d.volume_ratio!=null?`${d.volume_ratio}x Avg`:'N/A';
+  const stochStr=d.stoch_k!=null?`${d.stoch_k}`:'N/A';
+  const stochCls=d.stoch_bull?'bull':'bear';
+  const stochStat=d.stoch_k>80?'● Overbought':d.stoch_k<20?'● Oversold':'● In Range';
+
+  const tf=isIndex?curIdxTF:curTF;
+
+  const atrSection=d.signal==='BUY'&&!isIndex?`
   <div>
-    <div class="sec-lbl">⚡ ATR — Volatility &amp; Trade Sizing (${curTF})</div>
+    <div class="sec-lbl">⚡ ATR — Volatility &amp; Trade Sizing (${tf})</div>
     <div class="atr-block">
       <div>
         <div class="atr-lbl">ATR (14)</div>
         <div class="atr-v">${d.atr}</div>
-        <div style="font-size:10px;color:#a8d0e8;font-weight:600;margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
+        <div style="font-size:10px;color:#a8d0e8;font-weight:600;margin-top:4px;">Avg True Range<br>TF: ${tf}</div>
       </div>
       <div class="atr-d"></div>
       <div class="atr-det">
@@ -1168,20 +1252,38 @@ function buildCardHTML(d) {
         <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:#ffd600;font-size:13px;font-weight:800;">1 : 2.0</div></div>
       </div>
     </div>
-  </div>` : '';
+  </div>`:'';
 
-  const epsCls = d.eps_trend==='up'?'eps-u':d.eps_trend==='down'?'eps-d':'eps-f';
-  const epsTxt = d.eps_trend==='up'?'▲ Rising':d.eps_trend==='down'?'▼ Falling':'— Flat';
+  const epsCls=d.eps_trend==='up'?'eps-u':d.eps_trend==='down'?'eps-d':'eps-f';
+  const epsTxt=d.eps_trend==='up'?'▲ Rising':d.eps_trend==='down'?'▼ Falling':'— Flat';
+
+  const sectorTag=isIndex
+    ?`<span class="mtag mi">📊 Index</span>`
+    :`<span class="mtag ms">📂 ${d.sector}</span>`;
+
+  const fundamentalsSection=isIndex
+    ?`<div><div class="sec-lbl">📋 Index Info</div><div class="idx-notice">ℹ️ Fundamental metrics (P/E, EPS, Market Cap) are not applicable for indices. Technical analysis above reflects price action only.</div></div>`
+    :`<div>
+      <div class="sec-lbl">📈 Fundamental Overlay</div>
+      <div class="fundg">
+        <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb" style="color:#9ab8d8;">Price-to-Earnings</div></div>
+        <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb" style="color:#9ab8d8;">${d.eps} trailing EPS</div></div>
+        <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb" style="color:#9ab8d8;">Total Capitalization</div></div>
+        <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:14px;color:#dd99ff;font-weight:800;">${d.week52_low} – ${d.week52_high}</div><div class="fsb" style="color:#9ab8d8;">Low / High</div></div>
+        <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb" style="color:#9ab8d8;">Volatility vs Market</div></div>
+        <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb" style="color:#9ab8d8;">Annual Yield</div></div>
+      </div>
+    </div>`;
 
   return `
-  <div class="ac">
+  <div class="ac${isIndex?' idx-card':''}">
     <div class="ac-hdr">
       <div>
         <div class="ac-name">${d.name}</div>
         <div class="ac-meta">
           <span class="mtag mc">${d.country_flag} ${d.country==='IN'?'India':'USA'}</span>
-          <span class="mtag ms">📂 ${d.sector}</span>
-          <span class="mtag mt">⏱ ${curTF} Timeframe</span>
+          ${sectorTag}
+          <span class="mtag mt">⏱ ${tf} Timeframe</span>
           <span class="ticker-tag">${d.ticker}</span>
         </div>
       </div>
@@ -1213,7 +1315,7 @@ function buildCardHTML(d) {
       </div>
 
       <div>
-        <div class="sec-lbl">📊 Technical Indicators — ${curTF}</div>
+        <div class="sec-lbl">📊 Technical Indicators — ${tf}</div>
         <div class="ig">
           <div class="ic ${rsiCls(d.rsi)}">
             <div class="in">RSI (14)</div>
@@ -1247,7 +1349,7 @@ function buildCardHTML(d) {
       ${atrSection}
 
       <div>
-        <div class="sec-lbl">📍 Support &amp; Resistance — ${curTF} Timeframe | Pivot: ${d.pivot}</div>
+        <div class="sec-lbl">📍 Support &amp; Resistance — ${tf} Timeframe | Pivot: ${d.pivot}</div>
         <div class="srg">
           <div class="src">
             <div class="srh r">🔴 Resistance Levels</div>
@@ -1266,66 +1368,51 @@ function buildCardHTML(d) {
             </div>
           </div>
         </div>
-        <div class="sr-note">⚠️ S&amp;R levels dynamically calculated per selected timeframe (${curTF})</div>
+        <div class="sr-note">⚠️ S&amp;R levels dynamically calculated per selected timeframe (${tf})</div>
       </div>
 
-      <div>
-        <div class="sec-lbl">📈 Fundamental Overlay</div>
-        <div class="fundg">
-          <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb" style="color:#9ab8d8;">Price-to-Earnings</div></div>
-          <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb" style="color:#9ab8d8;">${d.eps} trailing EPS</div></div>
-          <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb" style="color:#9ab8d8;">Total Capitalization</div></div>
-          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:14px;color:#dd99ff;font-weight:800;">${d.week52_low} – ${d.week52_high}</div><div class="fsb" style="color:#9ab8d8;">Low / High</div></div>
-          <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb" style="color:#9ab8d8;">Volatility vs Market</div></div>
-          <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb" style="color:#9ab8d8;">Annual Yield</div></div>
-        </div>
-      </div>
+      ${fundamentalsSection}
 
     </div>
   </div>`;
 }
 
-/* ── Show card / silent patch ── */
-function showCard(silent = false) {
-  if (!curTicker) return;
-  const sec = document.getElementById('secSel').value;
-  const stocks = DATA[curCountry][sec] || [];
-  // Find the stock entry (unique per ticker), then get the right timeframe data
-  const stockEntry = stocks.find(s => s.ticker === curTicker);
-  const d = stockEntry ? (stockEntry.timeframes[curTF] || Object.values(stockEntry.timeframes)[0]) : null;
+/* ── Show stock card ── */
+function showCard(silent=false){
+  if(!curTicker) return;
+  const sec=document.getElementById('secSel').value;
+  const stocks=DATA[curCountry][sec]||[];
+  const stockEntry=stocks.find(s=>s.ticker===curTicker);
+  const d=stockEntry?(stockEntry.timeframes[curTF]||Object.values(stockEntry.timeframes)[0]):null;
 
-  if (!d) {
-    if (!silent) document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data for ${curTicker} on ${curTF}</div><div class="ph-sub">Try a different timeframe or re-run the script</div></div>`;
+  if(!d){
+    if(!silent) document.getElementById('out').innerHTML=`<div class="ph"><div class="ph-icon">⚠️</div><div class="ph-text">No data for ${curTicker} on ${curTF}</div><div class="ph-sub">Try a different timeframe or re-run the script</div></div>`;
     return;
   }
 
-  if (silent) {
-    /* Patch only the dynamic values — zero flicker, zero layout shift */
-    const outEl = document.getElementById('out');
-    const existing = outEl.querySelector('.ac');
-    if (!existing) { outEl.innerHTML = buildCardHTML(d); return; }
-
-    const priceEl = existing.querySelector('.ac-price');
-    const chgEl   = existing.querySelector('.chg-p,.chg-n');
-    const towBf   = existing.querySelector('.tow-bf');
-    const towSn   = existing.querySelector('.tow-sn');
-
-    if (priceEl) priceEl.textContent = d.price;
-    if (chgEl) { chgEl.className = d.change_pos?'chg-p':'chg-n'; chgEl.textContent=(d.change_pos?'▲ ':'▼ ')+d.change; }
-    if (towBf) towBf.style.width = d.bear_pct+'%';
-    if (towSn) towSn.textContent = d.score+' / 100';
-  } else {
-    document.getElementById('out').innerHTML = buildCardHTML(d);
+  if(silent){
+    const outEl=document.getElementById('out');
+    const existing=outEl.querySelector('.ac:not(.idx-card)');
+    if(!existing){outEl.innerHTML=buildCardHTML(d);return;}
+    const priceEl=existing.querySelector('.ac-price');
+    const chgEl=existing.querySelector('.chg-p,.chg-n');
+    const towBf=existing.querySelector('.tow-bf');
+    const towSn=existing.querySelector('.tow-sn');
+    if(priceEl) priceEl.textContent=d.price;
+    if(chgEl){chgEl.className=d.change_pos?'chg-p':'chg-n';chgEl.textContent=(d.change_pos?'▲ ':'▼ ')+d.change;}
+    if(towBf) towBf.style.width=d.bear_pct+'%';
+    if(towSn) towSn.textContent=d.score+' / 100';
+  }else{
+    document.getElementById('out').innerHTML=buildCardHTML(d);
     mark('s5','done','✓'); document.getElementById('s5v').textContent='✅ Done';
   }
-
-  _refreshCard = () => showCard(true);
+  _refreshCard=()=>showCard(true);
 }
 
 /* ── Bootstrap India sectors on load ── */
-(function init() {
-  const secSel = document.getElementById('secSel');
-  secSel.innerHTML = '<option value="">— Select Sector —</option>' +
+(function init(){
+  const secSel=document.getElementById('secSel');
+  secSel.innerHTML='<option value="">— Select Sector —</option>'+
     Object.keys(DATA['IN']||{}).map(s=>`<option value="${s}">${s}</option>`).join('');
 })();
 </script>
@@ -1334,9 +1421,10 @@ function showCard(silent = false) {
 """
 
 
-def build_html(data: dict, generated_at_ist: str) -> str:
+def build_html(data: dict, idx_data: dict, generated_at_ist: str) -> str:
     html = HTML_TEMPLATE.replace("__GENERATED_IST__", generated_at_ist)
-    html = html.replace("__DATA_JSON__", json.dumps(data, ensure_ascii=False))
+    html = html.replace("__DATA_JSON__",  json.dumps(data,     ensure_ascii=False))
+    html = html.replace("__IDX_JSON__",   json.dumps(idx_data, ensure_ascii=False))
     return html
 
 
@@ -1351,6 +1439,7 @@ def main():
     parser.add_argument("--ticker",    default=None)
     parser.add_argument("--timeframes",default="1D")
     parser.add_argument("--output",    default="docs/index.html")
+    parser.add_argument("--no-indices", action="store_true", help="Skip index analysis")
     args = parser.parse_args()
 
     tfs = [t.strip() for t in args.timeframes.split(",") if t.strip() in TF_CONFIG]
@@ -1359,7 +1448,6 @@ def main():
 
     countries = ["IN","US"] if args.country == "ALL" else [args.country]
 
-    # IST = UTC + 5:30
     ist_offset = timedelta(hours=5, minutes=30)
     now_ist = datetime.now(timezone.utc) + ist_offset
     generated_at_ist = now_ist.strftime("%Y-%m-%d %H:%M IST")
@@ -1369,25 +1457,19 @@ def main():
     print(f"  Countries: {countries} | Timeframes: {tfs}")
     print(f"{'='*60}\n")
 
+    # ── Stock Analysis ──
     output_data = {}
-
     for country in countries:
         output_data[country] = {}
         universe = STOCKS.get(country, {})
-
         for sector, stocks in universe.items():
             if args.sector and sector != args.sector:
                 continue
-
             print(f"\n[{country}] {sector}")
-            # Use dict keyed by ticker — prevents duplicates in JS dropdown when
-            # multiple timeframes are run (each stock appears only once in the list)
             sector_dict = {}
-
             for ticker, name in stocks:
                 if args.ticker and ticker != args.ticker:
                     continue
-
                 for tf in tfs:
                     result = analyse_stock(ticker, name, country, sector, tf)
                     if result:
@@ -1401,19 +1483,41 @@ def main():
                                 "timeframes":   {}
                             }
                         sector_dict[ticker]["timeframes"][tf] = result
-
             if sector_dict:
                 output_data[country][sector] = list(sector_dict.values())
 
-    html = build_html(output_data, generated_at_ist)
+    # ── Index Analysis ──
+    idx_data = {}
+    if not args.no_indices:
+        print(f"\n{'='*60}")
+        print("  Analysing Indian Indices ...")
+        print(f"{'='*60}")
+        for country, idx_map in INDICES.items():
+            for ticker, name in idx_map.items():
+                print(f"\n[INDEX] {name} ({ticker})")
+                idx_data[ticker] = {}
+                for tf in tfs:
+                    result = analyse_stock(ticker, name, country, "Index", tf, is_index=True)
+                    if result:
+                        idx_data[ticker][tf] = result
+
+    html = build_html(output_data, idx_data, generated_at_ist)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
 
-    total = sum(len(v) * len(list(v[0]["timeframes"].keys())) for country in output_data.values() for v in country.values() if v)
+    total_stocks = sum(
+        len(v) * len(list(v[0]["timeframes"].keys()))
+        for country in output_data.values()
+        for v in country.values() if v
+    )
+    total_idx = sum(len(tfs_dict) for tfs_dict in idx_data.values())
+
     print(f"\n{'='*60}")
-    print(f"  ✅ Done! Analysed {total} stock-timeframe combinations.")
-    print(f"  📄 HTML saved to: {out_path.resolve()}")
+    print(f"  ✅ Done!")
+    print(f"  📊 Stocks analysed:  {total_stocks} stock-timeframe combinations")
+    print(f"  🏦 Indices analysed: {total_idx} index-timeframe combinations")
+    print(f"  📄 HTML saved to:    {out_path.resolve()}")
     print(f"{'='*60}\n")
 
 
