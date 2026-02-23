@@ -643,7 +643,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .logo-icon{width:46px;height:46px;background:linear-gradient(135deg,var(--ab),var(--ap));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
 .logo-title{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text-bright);}
 .logo-title span{color:var(--ab);}
-.logo-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;}
+.logo-sub{font-family:'Space Mono',monospace;font-size:10px;color:#6aaace;margin-top:3px;letter-spacing:.5px;}
 
 /* Generated block — highlighted in cyan */
 .hdr-right{text-align:right;}
@@ -781,17 +781,17 @@ select option{background:#061020;color:#c8e8ff;}
   background:linear-gradient(135deg,rgba(0,212,255,.03),rgba(168,85,247,.03));
   display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;
 }
-.ac-name{font-size:24px;font-weight:800;letter-spacing:-.4px;color:var(--text-bright);}
+.ac-name{font-size:26px;font-weight:800;letter-spacing:-.4px;color:#f0f8ff;}
 .ac-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px;}
 .mtag{padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;border:1px solid;}
-.mc{background:rgba(0,255,136,.07);color:#00bb60;border-color:rgba(0,255,136,.18);}
-.ms{background:rgba(168,85,247,.07);color:#b47eff;border-color:rgba(168,85,247,.18);}
-.mt{background:rgba(0,212,255,.07);color:var(--ab);border-color:rgba(0,212,255,.18);}
-.ticker-tag{font-family:'Space Mono',monospace;font-size:10px;color:#6090b0;}
+.mc{background:rgba(0,255,136,.12);color:#00ee77;border-color:rgba(0,255,136,.35);font-size:11px;}
+.ms{background:rgba(168,85,247,.12);color:#cc88ff;border-color:rgba(168,85,247,.35);font-size:11px;}
+.mt{background:rgba(0,212,255,.12);color:#00e0ff;border-color:rgba(0,212,255,.35);font-size:11px;}
+.ticker-tag{font-family:'Space Mono',monospace;font-size:11px;color:#88aac8;font-weight:600;}
 .ac-pb{text-align:right;}
-.ac-price{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--ab);}
-.chg-p{color:var(--ag);font-family:'Space Mono',monospace;font-size:13px;margin-top:3px;}
-.chg-n{color:var(--ar);font-family:'Space Mono',monospace;font-size:13px;margin-top:3px;}
+.ac-price{font-family:'Space Mono',monospace;font-size:34px;font-weight:800;color:#00e5ff;}
+.chg-p{color:#00ff88;font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;font-weight:700;}
+.chg-n{color:#ff5577;font-family:'Space Mono',monospace;font-size:14px;margin-top:4px;font-weight:700;}
 .sig{padding:7px 18px;border-radius:8px;font-weight:800;font-size:12px;letter-spacing:.5px;display:inline-block;margin-top:9px;}
 .sig-buy{background:rgba(0,255,136,.1);color:var(--ag);border:1px solid rgba(0,255,136,.28);}
 .sig-sell{background:rgba(255,61,107,.1);color:var(--ar);border:1px solid rgba(255,61,107,.28);}
@@ -800,22 +800,22 @@ select option{background:#061020;color:#c8e8ff;}
 
 .ac-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;background:rgba(4,10,20,.5);}
 .sec-lbl{
-  font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
-  color:#7ab4d4;margin-bottom:13px;display:flex;align-items:center;gap:10px;
+  font-size:10px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;
+  color:#a8d8f8;margin-bottom:14px;display:flex;align-items:center;gap:10px;
 }
-.sec-lbl::after{content:'';flex:1;height:1px;background:rgba(120,180,220,.15);}
+.sec-lbl::after{content:'';flex:1;height:1px;background:rgba(120,180,220,.25);}
 
 /* ─── TOW ─── */
 .tow-lbls{display:flex;justify-content:space-between;margin-bottom:9px;}
-.tow-bear-l{font-size:11px;font-weight:700;color:var(--ar);}
-.tow-bull-l{font-size:11px;font-weight:700;color:var(--ag);}
+.tow-bear-l{font-size:12px;font-weight:800;color:#ff5577;}
+.tow-bull-l{font-size:12px;font-weight:800;color:#00ff88;}
 .tow-bar{height:30px;border-radius:15px;overflow:hidden;display:flex;position:relative;background:var(--border);}
 .tow-bf{height:100%;background:linear-gradient(90deg,#cc1540,#ff4060);}
 .tow-bull{height:100%;background:linear-gradient(90deg,#00bb60,#00ff88);flex:1;}
 .tow-div{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;background:rgba(255,255,255,.1);border-radius:2px;}
 .tow-sr{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
-.tow-st{font-family:'Space Mono',monospace;font-size:11px;color:#5a8aaa;}
-.tow-sn{font-size:17px;font-weight:800;}
+.tow-st{font-family:'Space Mono',monospace;font-size:11px;color:#7aaabb;}
+.tow-sn{font-size:20px;font-weight:800;}
 .tow-sn.buy{color:var(--ag);}
 .tow-sn.sell{color:var(--ar);}
 .tow-sn.hold{color:var(--ay);}
@@ -837,12 +837,12 @@ select option{background:#061020;color:#c8e8ff;}
 .ic.bull::before{background:var(--ag);}
 .ic.bear::before{background:var(--ar);}
 .ic.neut::before{background:var(--ay);}
-.in{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7ab4d4;}
-.iv{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;}
+.in{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a8d0e8;}
+.iv{font-family:'Space Mono',monospace;font-size:18px;font-weight:800;}
 .iv.bull{color:var(--ag);}
 .iv.bear{color:var(--ar);}
 .iv.neut{color:var(--ay);}
-.ist{font-size:9px;font-weight:700;}
+.ist{font-size:10px;font-weight:700;}
 .ist.bull{color:var(--ag);}
 .ist.bear{color:var(--ar);}
 .ist.neut{color:var(--ay);}
@@ -856,48 +856,48 @@ select option{background:#061020;color:#c8e8ff;}
   border-radius:11px;padding:16px 20px;
   display:grid;grid-template-columns:auto 1px 1fr 1fr;gap:18px;align-items:center;
 }
-.atr-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ddaa00;}
-.atr-v{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--ay);}
+.atr-lbl{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#ffcc00;}
+.atr-v{font-family:'Space Mono',monospace;font-size:26px;font-weight:800;color:#ffd600;}
 .atr-d{background:rgba(255,214,0,.12);align-self:stretch;}
 .atr-det{display:flex;flex-direction:column;gap:7px;}
-.atr-rl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7ab4d4;}
-.atr-rv{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
+.atr-rl{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a8d0e8;}
+.atr-rv{font-family:'Space Mono',monospace;font-size:15px;font-weight:800;}
 .stop{color:var(--ar);}
 .tgt{color:var(--ag);}
 
 /* ─── S&R ─── */
 .srg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.src{background:rgba(10,18,35,.95);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:16px;}
-.srh{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
-.srh.r{color:var(--ar);}
-.srh.s{color:var(--ag);}
+.src{background:rgba(8,15,30,.98);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:18px;}
+.srh{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+.srh.r{color:#ff6688;}
+.srh.s{color:#00ff99;}
 .srl{display:flex;flex-direction:column;gap:7px;}
 .srv{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;}
 .srv.r{background:rgba(255,61,107,.09);border:1px solid rgba(255,61,107,.25);}
 .srv.s{background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.22);}
-.srvl{font-size:9px;color:#7ab4d4;font-family:'Space Mono',monospace;font-weight:600;}
-.srvp{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;}
+.srvl{font-size:10px;color:#a8d0e8;font-family:'Space Mono',monospace;font-weight:700;}
+.srvp{font-family:'Space Mono',monospace;font-size:14px;font-weight:800;}
 .srvp.r{color:var(--ar);}
 .srvp.s{color:var(--ag);}
-.sr-note{font-family:'Space Mono',monospace;font-size:9px;color:#5a8aaa;margin-top:9px;text-align:center;}
+.sr-note{font-family:'Space Mono',monospace;font-size:10px;color:#7aaabb;margin-top:9px;text-align:center;}
 
 /* ─── FUNDAMENTALS ─── */
 .fundg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.fc{background:rgba(100,50,180,.08);border:1px solid rgba(168,85,247,.22);border-radius:11px;padding:14px;}
-.fl2{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#a07ce0;margin-bottom:7px;}
-.fv{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#cc99ff;}
-.fsb{font-size:9px;color:#6890b0;margin-top:3px;}
+.fc{background:rgba(80,30,160,.12);border:1px solid rgba(168,85,247,.3);border-radius:12px;padding:16px;}
+.fl2{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#c090ff;margin-bottom:8px;}
+.fv{font-family:'Space Mono',monospace;font-size:16px;font-weight:800;color:#dd99ff;}
+.fsb{font-size:10px;color:#8ab8d8;margin-top:4px;font-weight:500;}
 .eps-u{color:var(--ag);}
 .eps-d{color:var(--ar);}
 .eps-f{color:var(--ay);}
 
 /* ─── FOOTER ─── */
 footer{
-  text-align:center;padding:24px 0 10px;color:var(--muted2);
+  text-align:center;padding:24px 0 10px;color:#4a6a88;
   font-size:9px;font-family:'Space Mono',monospace;
   border-top:1px solid var(--border);margin-top:36px;line-height:2.2;
 }
-footer span{color:var(--muted);}
+footer span{color:#6a8aaa;}
 
 /* ─── RESPONSIVE ─── */
 @media(max-width:1100px){
@@ -948,12 +948,12 @@ footer span{color:var(--muted);}
     <div class="logo-icon">📈</div>
     <div>
       <div class="logo-title">Market<span>Intel</span></div>
-      <div class="logo-sub">NIFTY 50 · S&P TOP 50 · MULTI-TIMEFRAME ANALYSIS</div>
+      <div class="logo-sub" style="color:#6aaace;letter-spacing:1.5px;">NIFTY 50 · S&P TOP 50 · MULTI-TIMEFRAME ANALYSIS</div>
     </div>
   </div>
   <div class="hdr-right">
     <div class="gen-block">
-      <div class="gen-label">Generated (IST)</div>
+      <div class="gen-label" style="color:#00c0e8;font-size:9px;letter-spacing:2px;">Generated (IST)</div>
       <div class="gen-time">__GENERATED_IST__</div>
       <div class="gen-live"><span class="live"></span><span id="liveClk">--:--:-- IST</span></div>
     </div>
@@ -1156,16 +1156,16 @@ function buildCardHTML(d) {
       <div>
         <div class="atr-lbl">ATR (14)</div>
         <div class="atr-v">${d.atr}</div>
-        <div style="font-size:9px;color:#7ab4d4;margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
+        <div style="font-size:10px;color:#a8d0e8;font-weight:600;margin-top:4px;">Avg True Range<br>TF: ${curTF}</div>
       </div>
       <div class="atr-d"></div>
       <div class="atr-det">
         <div><div class="atr-rl">🔴 Stop Loss (1.5× ATR)</div><div class="atr-rv stop">${d.stop_loss}</div></div>
-        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:#7ab4d4;font-size:11px;font-weight:600;">Entry − Stop Loss</div></div>
+        <div><div class="atr-rl">Risk Per Share</div><div class="atr-rv" style="color:#a8d0e8;font-size:12px;font-weight:700;">Entry − Stop Loss</div></div>
       </div>
       <div class="atr-det">
         <div><div class="atr-rl">🟢 Target (2× ATR)</div><div class="atr-rv tgt">${d.target}</div></div>
-        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:#ffd600;font-size:12px;font-weight:700;">1 : 2.0</div></div>
+        <div><div class="atr-rl">Risk : Reward</div><div class="atr-rv" style="color:#ffd600;font-size:13px;font-weight:800;">1 : 2.0</div></div>
       </div>
     </div>
   </div>` : '';
@@ -1223,12 +1223,12 @@ function buildCardHTML(d) {
           </div>
           <div class="ic ${d.macd_bull?'bull':'bear'}">
             <div class="in">MACD</div>
-            <div class="iv ${d.macd_bull?'bull':'bear'}" style="font-size:13px;">${d.macd??'N/A'}</div>
+            <div class="iv ${d.macd_bull?'bull':'bear'}" style="font-size:16px;">${d.macd??'N/A'}</div>
             <div class="ist ${d.macd_bull?'bull':'bear'}">${d.macd_bull?'● Bullish Cross':'● Bearish Cross'}</div>
           </div>
           <div class="ic ${d.ema_bull?'bull':'bear'}">
             <div class="in">EMA 50/200</div>
-            <div class="iv ${d.ema_bull?'bull':'bear'}" style="font-size:12px;">${d.ema_signal}</div>
+            <div class="iv ${d.ema_bull?'bull':'bear'}" style="font-size:15px;">${d.ema_signal}</div>
             <div class="ist ${d.ema_bull?'bull':'bear'}">${d.ema_bull?'● Uptrend':'● Downtrend'}</div>
           </div>
           <div class="ic ${d.volume_bull?'bull':'neut'}">
@@ -1272,12 +1272,12 @@ function buildCardHTML(d) {
       <div>
         <div class="sec-lbl">📈 Fundamental Overlay</div>
         <div class="fundg">
-          <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb">Price-to-Earnings</div></div>
-          <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb">${d.eps} trailing EPS</div></div>
-          <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb">Total Capitalization</div></div>
-          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:13px;color:#cc99ff;">${d.week52_low} – ${d.week52_high}</div><div class="fsb">Low / High</div></div>
-          <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb">Volatility vs Market</div></div>
-          <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb">Annual Yield</div></div>
+          <div class="fc"><div class="fl2">P/E Ratio</div><div class="fv">${d.pe}</div><div class="fsb" style="color:#9ab8d8;">Price-to-Earnings</div></div>
+          <div class="fc"><div class="fl2">EPS Trend</div><div class="fv ${epsCls}">${epsTxt}</div><div class="fsb" style="color:#9ab8d8;">${d.eps} trailing EPS</div></div>
+          <div class="fc"><div class="fl2">Market Cap</div><div class="fv">${d.market_cap}</div><div class="fsb" style="color:#9ab8d8;">Total Capitalization</div></div>
+          <div class="fc"><div class="fl2">52-Week Range</div><div class="fv" style="font-size:14px;color:#dd99ff;font-weight:800;">${d.week52_low} – ${d.week52_high}</div><div class="fsb" style="color:#9ab8d8;">Low / High</div></div>
+          <div class="fc"><div class="fl2">Beta</div><div class="fv">${d.beta}</div><div class="fsb" style="color:#9ab8d8;">Volatility vs Market</div></div>
+          <div class="fc"><div class="fl2">Dividend Yield</div><div class="fv">${d.dividend_yield}</div><div class="fsb" style="color:#9ab8d8;">Annual Yield</div></div>
         </div>
       </div>
 
