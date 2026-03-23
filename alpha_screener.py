@@ -266,16 +266,13 @@ def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> d
 # SUPPORT & RESISTANCE
 # ─────────────────────────────────────────────
 
-def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
+def calculate_sr(df: pd.DataFrame, n_levels: int = 3, tf: str = "1D") -> dict:
     """
-    Derive support & resistance purely from price history (no pivot formula).
-    Steps:
-      1. Detect swing highs/lows using a local-max/min window (lookback=5 bars).
-      2. Weight each swing by how recently it occurred — recent touches count more.
-      3. Cluster nearby levels (within 0.8 % of each other) and pick the
-         strongest cluster centre above price (resistance) and below (support).
-      4. Fall back to ±2 % / ±4 % / ±6 % of current price only when the
-         history genuinely has fewer than n_levels on one side.
+    Derive support & resistance from RECENT price history.
+    - Uses a timeframe-aware lookback window and recent-bar limit
+      so 'nearest' levels are genuinely close to the current price.
+    - 1D: looks back ~90 bars (≈4 months) with lb=10 so only
+      significant daily pivots are captured, not every minor wiggle.
     """
     close = df["close"].values
     high  = df["high"].values
@@ -283,52 +280,65 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
     n     = len(df)
     current_price = float(close[-1])
 
-    # ── 1. Swing detection (lookback = 5 bars each side) ──────────────────
-    lb = 5
-    swing_highs: list[tuple[float, float]] = []   # (price, weight)
+    # ── Timeframe-aware settings ───────────────────────────────────────────
+    # lb     = swing detection window each side (larger → fewer, more significant swings)
+    # recent = only analyse the most recent N bars (keeps levels near current price)
+    # tol    = cluster merge tolerance as fraction of price
+    tf_settings = {
+        "15m": {"lb": 5,  "recent": 100, "tol": 0.004},
+        "1H":  {"lb": 7,  "recent": 120, "tol": 0.006},
+        "1D":  {"lb": 10, "recent": 90,  "tol": 0.015},  # 90 trading days ≈ 4 months
+        "1W":  {"lb": 5,  "recent": 60,  "tol": 0.020},
+    }
+    cfg    = tf_settings.get(tf, {"lb": 10, "recent": 90, "tol": 0.015})
+    lb     = cfg["lb"]
+    recent = min(cfg["recent"], n)   # don't exceed available data
+    tol    = cfg["tol"]
+
+    # ── Slice to recent bars only ──────────────────────────────────────────
+    h  = high[-recent:]
+    l  = low[-recent:]
+    c  = close[-recent:]
+    nr = len(h)
+
+    swing_highs: list[tuple[float, float]] = []   # (price, recency_weight)
     swing_lows:  list[tuple[float, float]] = []
 
-    for i in range(lb, n - lb):
-        recency_weight = 1.0 + (i / n)            # later bars weigh more
-        if high[i] == max(high[i - lb: i + lb + 1]):
-            swing_highs.append((float(high[i]), recency_weight))
-        if low[i]  == min(low[i  - lb: i + lb + 1]):
-            swing_lows.append((float(low[i]),  recency_weight))
+    for i in range(lb, nr - lb):
+        recency_weight = 1.0 + (i / nr)           # later bars weigh more
+        if h[i] == max(h[i - lb: i + lb + 1]):
+            swing_highs.append((float(h[i]), recency_weight))
+        if l[i] == min(l[i - lb: i + lb + 1]):
+            swing_lows.append((float(l[i]), recency_weight))
 
-    # ── 2. Cluster nearby swings ──────────────────────────────────────────
-    def cluster_levels(
-        swings: list[tuple[float, float]],
-        tol: float = 0.008,
-    ) -> list[float]:
-        """Merge levels within `tol` (0.8 %) of each other; return weighted centres."""
+    # ── Cluster nearby swings ──────────────────────────────────────────────
+    def cluster_levels(swings: list[tuple[float, float]], tolerance: float) -> list[float]:
+        """Merge levels within `tolerance` of each other; return weighted centres."""
         if not swings:
             return []
         swings = sorted(swings, key=lambda x: x[0])
         clusters: list[list[tuple[float, float]]] = [[swings[0]]]
         for price, w in swings[1:]:
-            if (price - clusters[-1][-1][0]) / clusters[-1][-1][0] < tol:
+            ref = clusters[-1][-1][0]
+            if (price - ref) / ref < tolerance:
                 clusters[-1].append((price, w))
             else:
                 clusters.append([(price, w)])
 
         centres = []
         for grp in clusters:
-            prices  = [p for p, _ in grp]
-            weights = [w for _, w in grp]
-            total_w = sum(weights)
-            centre  = sum(p * w for p, w in grp) / total_w
-            # strength = total weight × touch count (more touches → stronger level)
-            strength = total_w * len(grp)
+            total_w  = sum(w for _, w in grp)
+            centre   = sum(p * w for p, w in grp) / total_w
+            strength = total_w * len(grp)          # more touches → stronger
             centres.append((round(centre, 2), strength))
 
-        # Sort by strength descending so the most significant clusters come first
-        centres.sort(key=lambda x: -x[1])
+        centres.sort(key=lambda x: -x[1])          # strongest first
         return [c for c, _ in centres]
 
-    resistance_candidates = cluster_levels(swing_highs)
-    support_candidates    = cluster_levels(swing_lows)
+    resistance_candidates = cluster_levels(swing_highs, tol)
+    support_candidates    = cluster_levels(swing_lows,  tol)
 
-    # ── 3. Filter relative to current price and take top n_levels ─────────
+    # ── Filter to levels nearest to current price ──────────────────────────
     resistance = sorted(
         [x for x in resistance_candidates if x > current_price * 1.001]
     )[:n_levels]
@@ -338,22 +348,21 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
         reverse=True,
     )[:n_levels]
 
-    # ── 4. Fill any missing levels with percentage-based fallbacks ─────────
-    fallback_pcts_r = [0.02, 0.04, 0.06]
-    fallback_pcts_s = [0.02, 0.04, 0.06]
+    # ── Fallback: percentage-based when history lacks enough levels ────────
+    fallback_pcts = [0.02, 0.04, 0.06]
     fi = 0
     while len(resistance) < n_levels:
-        resistance.append(round(current_price * (1 + fallback_pcts_r[fi]), 2))
+        resistance.append(round(current_price * (1 + fallback_pcts[fi]), 2))
         fi += 1
     fi = 0
     while len(support) < n_levels:
-        support.append(round(current_price * (1 - fallback_pcts_s[fi]), 2))
+        support.append(round(current_price * (1 - fallback_pcts[fi]), 2))
         fi += 1
 
     resistance = sorted(resistance)[:n_levels]
     support    = sorted(support, reverse=True)[:n_levels]
 
-    # Representative "current level" — midpoint of last bar's range
+    # Representative pivot — midpoint of last bar's range
     mid = round((float(high[-1]) + float(low[-1]) + float(close[-1])) / 3, 2)
 
     return {
@@ -597,7 +606,7 @@ def analyse_stock(ticker: str, name: str, country: str, sector: str, tf: str, is
         return None
 
     ind  = calculate_indicators(df)
-    sr   = calculate_sr(df)
+    sr   = calculate_sr(df, tf=tf)
     fund = fetch_fundamentals(ticker, is_india, is_index)
 
     curr_price = float(df["close"].iloc[-1])
