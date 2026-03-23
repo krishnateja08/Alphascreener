@@ -267,64 +267,99 @@ def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> d
 # ─────────────────────────────────────────────
 
 def calculate_sr(df: pd.DataFrame, n_levels: int = 3) -> dict:
+    """
+    Derive support & resistance purely from price history (no pivot formula).
+    Steps:
+      1. Detect swing highs/lows using a local-max/min window (lookback=5 bars).
+      2. Weight each swing by how recently it occurred — recent touches count more.
+      3. Cluster nearby levels (within 0.8 % of each other) and pick the
+         strongest cluster centre above price (resistance) and below (support).
+      4. Fall back to ±2 % / ±4 % / ±6 % of current price only when the
+         history genuinely has fewer than n_levels on one side.
+    """
     close = df["close"].values
     high  = df["high"].values
     low   = df["low"].values
+    n     = len(df)
     current_price = float(close[-1])
 
-    window = min(20, len(df) - 1)
-    recent_high = float(np.max(high[-window:]))
-    recent_low  = float(np.min(low[-window:]))
-    pivot       = (recent_high + recent_low + float(close[-window])) / 3
+    # ── 1. Swing detection (lookback = 5 bars each side) ──────────────────
+    lb = 5
+    swing_highs: list[tuple[float, float]] = []   # (price, weight)
+    swing_lows:  list[tuple[float, float]] = []
 
-    r_pivot = [
-        round(2 * pivot - recent_low, 2),
-        round(pivot + (recent_high - recent_low), 2),
-        round(recent_high + 2 * (pivot - recent_low), 2),
-    ]
-    s_pivot = [
-        round(2 * pivot - recent_high, 2),
-        round(pivot - (recent_high - recent_low), 2),
-        round(recent_low - 2 * (recent_high - pivot), 2),
-    ]
+    for i in range(lb, n - lb):
+        recency_weight = 1.0 + (i / n)            # later bars weigh more
+        if high[i] == max(high[i - lb: i + lb + 1]):
+            swing_highs.append((float(high[i]), recency_weight))
+        if low[i]  == min(low[i  - lb: i + lb + 1]):
+            swing_lows.append((float(low[i]),  recency_weight))
 
-    swing_highs, swing_lows = [], []
-    for i in range(2, len(high) - 2):
-        if high[i] > high[i-1] and high[i] > high[i-2] and high[i] > high[i+1] and high[i] > high[i+2]:
-            swing_highs.append(float(high[i]))
-        if low[i] < low[i-1] and low[i] < low[i-2] and low[i] < low[i+1] and low[i] < low[i+2]:
-            swing_lows.append(float(low[i]))
-
-    def cluster(levels, tol=0.005):
-        if not levels: return []
-        levels = sorted(set(levels))
-        clusters, grp = [], [levels[0]]
-        for l in levels[1:]:
-            if (l - grp[-1]) / grp[-1] < tol:
-                grp.append(l)
+    # ── 2. Cluster nearby swings ──────────────────────────────────────────
+    def cluster_levels(
+        swings: list[tuple[float, float]],
+        tol: float = 0.008,
+    ) -> list[float]:
+        """Merge levels within `tol` (0.8 %) of each other; return weighted centres."""
+        if not swings:
+            return []
+        swings = sorted(swings, key=lambda x: x[0])
+        clusters: list[list[tuple[float, float]]] = [[swings[0]]]
+        for price, w in swings[1:]:
+            if (price - clusters[-1][-1][0]) / clusters[-1][-1][0] < tol:
+                clusters[-1].append((price, w))
             else:
-                clusters.append(round(np.mean(grp), 2))
-                grp = [l]
-        clusters.append(round(np.mean(grp), 2))
-        return clusters
+                clusters.append([(price, w)])
 
-    swing_h_clusters = cluster(swing_highs)
-    swing_l_clusters = cluster(swing_lows)
+        centres = []
+        for grp in clusters:
+            prices  = [p for p, _ in grp]
+            weights = [w for _, w in grp]
+            total_w = sum(weights)
+            centre  = sum(p * w for p, w in grp) / total_w
+            # strength = total weight × touch count (more touches → stronger level)
+            strength = total_w * len(grp)
+            centres.append((round(centre, 2), strength))
 
-    resistance = sorted([x for x in swing_h_clusters + r_pivot if x > current_price])[:n_levels]
-    support    = sorted([x for x in swing_l_clusters + s_pivot if x < current_price], reverse=True)[:n_levels]
+        # Sort by strength descending so the most significant clusters come first
+        centres.sort(key=lambda x: -x[1])
+        return [c for c, _ in centres]
 
+    resistance_candidates = cluster_levels(swing_highs)
+    support_candidates    = cluster_levels(swing_lows)
+
+    # ── 3. Filter relative to current price and take top n_levels ─────────
+    resistance = sorted(
+        [x for x in resistance_candidates if x > current_price * 1.001]
+    )[:n_levels]
+
+    support = sorted(
+        [x for x in support_candidates if x < current_price * 0.999],
+        reverse=True,
+    )[:n_levels]
+
+    # ── 4. Fill any missing levels with percentage-based fallbacks ─────────
+    fallback_pcts_r = [0.02, 0.04, 0.06]
+    fallback_pcts_s = [0.02, 0.04, 0.06]
+    fi = 0
     while len(resistance) < n_levels:
-        last = resistance[-1] if resistance else current_price
-        resistance.append(round(last * 1.02, 2))
+        resistance.append(round(current_price * (1 + fallback_pcts_r[fi]), 2))
+        fi += 1
+    fi = 0
     while len(support) < n_levels:
-        last = support[-1] if support else current_price
-        support.append(round(last * 0.98, 2))
+        support.append(round(current_price * (1 - fallback_pcts_s[fi]), 2))
+        fi += 1
+
+    resistance = sorted(resistance)[:n_levels]
+    support    = sorted(support, reverse=True)[:n_levels]
+
+    # Representative "current level" — midpoint of last bar's range
+    mid = round((float(high[-1]) + float(low[-1]) + float(close[-1])) / 3, 2)
 
     return {
-        "resistance": resistance[:n_levels],
-        "support":    support[:n_levels],
-        "pivot":      round(pivot, 2),
+        "resistance": resistance,
+        "support":    support,
+        "pivot":      mid,
     }
 
 # ─────────────────────────────────────────────
@@ -876,16 +911,16 @@ select option{background:#061020;color:#e0f4ff;}
 
 /* ─── S&R ─── */
 .srg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.src{background:rgba(8,15,30,.98);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:18px;}
-.srh{font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+.src{background:rgba(8,15,30,.98);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;}
+.srh{font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
 .srh.r{color:#ff7799;}
 .srh.s{color:#00ffaa;}
-.srl{display:flex;flex-direction:column;gap:8px;}
-.srv{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:7px;}
+.srl{display:flex;flex-direction:column;gap:5px;}
+.srv{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:7px;}
 .srv.r{background:rgba(255,61,107,.1);border:1px solid rgba(255,61,107,.35);}
 .srv.s{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.32);}
-.srvl{font-size:12px;color:#d0eeff;font-family:'Space Mono',monospace;font-weight:700;}
-.srvp{font-family:'Space Mono',monospace;font-size:16px;font-weight:800;}
+.srvl{font-size:11px;color:#d0eeff;font-family:'Space Mono',monospace;font-weight:700;}
+.srvp{font-family:'Space Mono',monospace;font-size:14px;font-weight:800;}
 .srvp.r{color:var(--ar);}
 .srvp.s{color:var(--ag);}
 .sr-note{font-family:'Space Mono',monospace;font-size:12px;color:#aaddcc;margin-top:10px;text-align:center;}
@@ -1349,7 +1384,7 @@ function buildCardHTML(d, isIndex=false){
       ${atrSection}
 
       <div>
-        <div class="sec-lbl">📍 Support &amp; Resistance — ${tf} Timeframe | Pivot: ${d.pivot}</div>
+        <div class="sec-lbl">📍 Support &amp; Resistance — ${tf} Timeframe | Last: ${d.pivot}</div>
         <div class="srg">
           <div class="src">
             <div class="srh r">🔴 Resistance Levels</div>
