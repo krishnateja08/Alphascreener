@@ -13,6 +13,9 @@ import json
 import os
 import sys
 import argparse
+import threading
+import functools
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -210,6 +213,16 @@ def fetch_ohlcv(ticker: str, tf: str):
         return None
 
 
+# ─────────────────────────────────────────────
+# FUNDAMENTALS CACHE
+# Fundamentals don't change across timeframes, so we fetch once per ticker
+# and reuse. A lock prevents duplicate in-flight requests under threading.
+# ─────────────────────────────────────────────
+
+_fund_cache: dict = {}
+_fund_lock  = threading.Lock()
+
+
 def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> dict:
     currency = "₹" if is_india else "$"
     defaults = {
@@ -220,6 +233,15 @@ def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> d
     }
     if is_index:
         return defaults
+
+    # ── Cache check (thread-safe) ──────────────────────────────────────────
+    # Fundamentals are the same across all timeframes for the same ticker,
+    # so we fetch once and reuse. The lock ensures only one thread fires the
+    # network request; all other threads wait and then read from cache.
+    with _fund_lock:
+        if ticker in _fund_cache:
+            return _fund_cache[ticker]
+
     try:
         info = yf.Ticker(ticker).info
         pe  = info.get("trailingPE") or info.get("forwardPE")
@@ -246,7 +268,7 @@ def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> d
             if n >= 1e6:  return f"{currency}{n/1e6:.2f}M"
             return f"{currency}{n:,.0f}"
 
-        return {
+        result = {
             "pe":            f"{pe:.1f}x" if pe else "N/A",
             "eps":           f"{currency}{eps:.2f}" if eps else "N/A",
             "eps_trend":     eps_trend,
@@ -258,8 +280,13 @@ def fetch_fundamentals(ticker: str, is_india: bool, is_index: bool = False) -> d
             "beta":          f"{beta:.2f}" if beta else "N/A",
             "sector":        sector,
         }
+        with _fund_lock:
+            _fund_cache[ticker] = result
+        return result
     except Exception as e:
         print(f"  [WARN] {ticker} fundamentals failed: {e}")
+        with _fund_lock:
+            _fund_cache[ticker] = defaults
         return defaults
 
 # ─────────────────────────────────────────────
@@ -1588,6 +1615,10 @@ def main():
     parser.add_argument("--timeframes",default="1D")
     parser.add_argument("--output",    default="docs/index.html")
     parser.add_argument("--no-indices", action="store_true", help="Skip index analysis")
+    parser.add_argument(
+        "--workers", type=int, default=20,
+        help="Parallel download threads (default: 20). Lower if you hit rate limits.",
+    )
     args = parser.parse_args()
 
     tfs = [t.strip() for t in args.timeframes.split(",") if t.strip() in TF_CONFIG]
@@ -1603,36 +1634,65 @@ def main():
     print(f"\n{'='*60}")
     print(f"  MarketIntel Analysis — {generated_at_ist}")
     print(f"  Countries: {countries} | Timeframes: {tfs}")
+    print(f"  Workers: {args.workers} parallel threads")
     print(f"{'='*60}\n")
 
-    # ── Stock Analysis ──
-    output_data = {}
+    # ── Build flat task list ───────────────────────────────────────────────
+    # (country, sector, ticker, name, tf)  for every combination requested.
+    stock_tasks: list[tuple] = []
     for country in countries:
-        output_data[country] = {}
         universe = STOCKS.get(country, {})
         for sector, stocks in universe.items():
             if args.sector and sector != args.sector:
                 continue
-            print(f"\n[{country}] {sector}")
-            sector_dict = {}
             for ticker, name in stocks:
                 if args.ticker and ticker != args.ticker:
                     continue
                 for tf in tfs:
-                    result = analyse_stock(ticker, name, country, sector, tf)
-                    if result:
-                        if ticker not in sector_dict:
-                            sector_dict[ticker] = {
-                                "ticker":       ticker,
-                                "name":         name,
-                                "country":      country,
-                                "country_flag": result["country_flag"],
-                                "sector":       sector,
-                                "timeframes":   {}
-                            }
-                        sector_dict[ticker]["timeframes"][tf] = result
-            if sector_dict:
-                output_data[country][sector] = list(sector_dict.values())
+                    stock_tasks.append((country, sector, ticker, name, tf))
+
+    total_tasks = len(stock_tasks)
+    print(f"  📋 {total_tasks} stock-timeframe tasks queued\n")
+
+    # ── Run stock tasks in parallel ────────────────────────────────────────
+    # Results keyed as (country, sector, ticker) → {tf: result}
+    results_map: dict = {}
+    completed = 0
+
+    def _run_stock(task):
+        country, sector, ticker, name, tf = task
+        return task, analyse_stock(ticker, name, country, sector, tf)
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        futures = {pool.submit(_run_stock, t): t for t in stock_tasks}
+        for future in as_completed(futures):
+            completed += 1
+            task, result = future.result()
+            country, sector, ticker, name, tf = task
+            if result:
+                key = (country, sector, ticker)
+                if key not in results_map:
+                    results_map[key] = {
+                        "ticker":       ticker,
+                        "name":         name,
+                        "country":      country,
+                        "country_flag": result["country_flag"],
+                        "sector":       sector,
+                        "timeframes":   {},
+                    }
+                results_map[key]["timeframes"][tf] = result
+            # Live progress line (overwrites itself)
+            print(f"\r  ⏳ Progress: {completed}/{total_tasks}", end="", flush=True)
+
+    print(f"\r  ✅ All stock tasks complete.{' ' * 20}")
+
+    # ── Rebuild output_data structure expected by build_html ──────────────
+    output_data: dict = {c: {} for c in countries}
+    for (country, sector, ticker), entry in results_map.items():
+        output_data.setdefault(country, {}).setdefault(sector, [])
+        # Avoid duplicates (each ticker appears once per sector)
+        if not any(s["ticker"] == ticker for s in output_data[country][sector]):
+            output_data[country][sector].append(entry)
 
     # ── Index Analysis ──
     idx_data = {}
@@ -1640,14 +1700,24 @@ def main():
         print(f"\n{'='*60}")
         print("  Analysing Indian Indices ...")
         print(f"{'='*60}")
-        for country, idx_map in INDICES.items():
-            for ticker, name in idx_map.items():
-                print(f"\n[INDEX] {name} ({ticker})")
-                idx_data[ticker] = {}
-                for tf in tfs:
-                    result = analyse_stock(ticker, name, country, "Index", tf, is_index=True)
-                    if result:
-                        idx_data[ticker][tf] = result
+
+        idx_tasks = [
+            (country, ticker, name, tf)
+            for country, idx_map in INDICES.items()
+            for ticker, name in idx_map.items()
+            for tf in tfs
+        ]
+
+        def _run_index(task):
+            country, ticker, name, tf = task
+            return task, analyse_stock(ticker, name, country, "Index", tf, is_index=True)
+
+        with ThreadPoolExecutor(max_workers=min(args.workers, len(idx_tasks) or 1)) as pool:
+            for future in as_completed(pool.submit(_run_index, t) for t in idx_tasks):
+                task, result = future.result()
+                country, ticker, name, tf = task
+                if result:
+                    idx_data.setdefault(ticker, {})[tf] = result
 
     html = build_html(output_data, idx_data, generated_at_ist)
     out_path = Path(args.output)
