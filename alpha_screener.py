@@ -282,6 +282,17 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3, tf: str = "1D") -> dict:
          levels are never unrealistically far away.
       4. Every timeframe gets its own tuned parameters so 15m, 1H, 1D
          and 1W all produce meaningfully different, relevant levels.
+
+    Fixes applied (v2):
+      - Cluster anchor uses FIRST point in cluster (not last) to prevent
+        chain-drift merging zones wider than the tolerance.
+      - Minimum gap enforced between adjacent levels so nearly-identical
+        swings don't both appear as R1/R2 or S1/S2.
+      - Padding loop is duplicate-safe: checks before appending so a
+        previously-used fallback value cannot be re-inserted.
+      - Pivot now uses the PREVIOUS bar's HLC for a proper forward-looking
+        next-session pivot point.
+      - 15m lb bumped 4 → 5 to reduce micro-noise in swing detection.
     """
     close = df["close"].values
     high  = df["high"].values
@@ -298,7 +309,7 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3, tf: str = "1D") -> dict:
     #  fb_pcts  : fallback percentages used when no swing found in cap zone
     tf_settings = {
         "15m": {
-            "lb": 4, "recent": 80, "tol": 0.003,
+            "lb": 5, "recent": 80, "tol": 0.003,
             "max_pcts": [0.025, 0.050, 0.080],
             "fb_pcts":  [0.010, 0.020, 0.035],
         },
@@ -348,7 +359,10 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3, tf: str = "1D") -> dict:
         swings = sorted(swings, key=lambda x: x[0])
         clusters: list[list[tuple[float, float]]] = [[swings[0]]]
         for price, w in swings[1:]:
-            ref = clusters[-1][-1][0]
+            # Anchor to the FIRST item in the cluster (not the last) so a long
+            # chain of close-but-drifting swings cannot merge into one huge zone
+            # that spans more than `tolerance` from its starting point.
+            ref = clusters[-1][0][0]
             if (price - ref) / ref < tolerance:
                 clusters[-1].append((price, w))
             else:
@@ -404,24 +418,56 @@ def calculate_sr(df: pd.DataFrame, n_levels: int = 3, tf: str = "1D") -> dict:
     resistance = pick_levels(all_resistance, max_pcts, fb_pcts, above=True)
     support    = pick_levels(all_support,    max_pcts, fb_pcts, above=False)
 
-    # ── Final sort: resistance ascending (nearest first), support descending
-    resistance = sorted(set(resistance))[:n_levels]
-    support    = sorted(set(support), reverse=True)[:n_levels]
+    # ── Enforce a minimum gap between adjacent levels (1.5 × tol) ────────────
+    # Prevents two swing-based levels that are nearly identical from both
+    # appearing (e.g. two swing highs only 0.2% apart landing as R1 and R2).
+    def enforce_min_gap(levels: list[float], above: bool) -> list[float]:
+        min_gap = current_price * max(tol * 1.5, 0.008)   # at least 0.8%
+        spaced  = [levels[0]]
+        for lvl in levels[1:]:
+            if abs(lvl - spaced[-1]) >= min_gap:
+                spaced.append(lvl)
+        # If gap-enforcement removed levels, pad with clean fallbacks
+        fi = 0
+        while len(spaced) < n_levels and fi < len(fb_pcts):
+            candidate = round(
+                current_price * (1 + fb_pcts[fi]) if above
+                else current_price * (1 - fb_pcts[fi]), 2
+            )
+            if candidate not in spaced and abs(candidate - spaced[-1]) >= min_gap:
+                spaced.append(candidate)
+            fi += 1
+        return spaced[:n_levels]
 
-    # Pad if deduplication left fewer than n_levels
+    # ── Final sort: resistance ascending (nearest first), support descending ──
+    resistance = enforce_min_gap(sorted(set(resistance)),               above=True)
+    support    = enforce_min_gap(sorted(set(support), reverse=True),    above=False)
+
+    # Pad if gap-enforcement or deduplication left fewer than n_levels.
+    # Guard: only append a fallback if it is not already present, so a
+    # previously-used fallback value cannot re-create a duplicate.
     fi = 0
-    while len(resistance) < n_levels:
-        resistance.append(round(current_price * (1 + fb_pcts[fi]), 2))
+    while len(resistance) < n_levels and fi < len(fb_pcts):
+        candidate = round(current_price * (1 + fb_pcts[fi]), 2)
+        if candidate not in resistance:
+            resistance.append(candidate)
         fi += 1
     fi = 0
-    while len(support) < n_levels:
-        support.append(round(current_price * (1 - fb_pcts[fi]), 2))
+    while len(support) < n_levels and fi < len(fb_pcts):
+        candidate = round(current_price * (1 - fb_pcts[fi]), 2)
+        if candidate not in support:
+            support.append(candidate)
         fi += 1
 
     resistance = sorted(resistance)[:n_levels]
     support    = sorted(support, reverse=True)[:n_levels]
 
-    mid = round((float(high[-1]) + float(low[-1]) + float(close[-1])) / 3, 2)
+    # Pivot: use the PREVIOUS bar's HLC so it projects forward as a
+    # classic next-session pivot (not today's intraday midpoint).
+    pivot_bar = -2 if len(df) >= 2 else -1
+    mid = round(
+        (float(high[pivot_bar]) + float(low[pivot_bar]) + float(close[pivot_bar])) / 3, 2
+    )
 
     return {
         "resistance": resistance,
